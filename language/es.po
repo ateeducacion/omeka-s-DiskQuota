@@ -1,46 +1,62 @@
-#: Module.php:594
+#: Module.php:640
 msgid "Unknown"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:12
+#: view/common/site-quota-usage.phtml:13 view/common/user-quota-usage.phtml:12
 msgid "Disk Quota"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:15
+#: view/common/site-quota-usage.phtml:16 view/common/user-quota-usage.phtml:15
 msgid "Usage:"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:18
+#: view/common/site-quota-usage.phtml:19 view/common/user-quota-usage.phtml:18
 msgid "unlimited"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:19
+#: view/common/site-quota-usage.phtml:20 view/common/user-quota-usage.phtml:19
 #, php-format
 msgid "%s MB of %s MB"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:23
+#: view/common/site-quota-usage.phtml:23 view/common/user-quota-usage.phtml:23
 msgid "Total Files:"
 msgstr ""
 
-#: view/common/user-quota-usage.phtml:36
+#: view/common/site-quota-usage.phtml:32 view/common/user-quota-usage.phtml:36
 msgid "used"
 msgstr ""
 
-#: Module.php:205
+#: view/common/site-quota-usage.phtml:36
+msgid "No quota limit set."
+msgstr ""
+
+#: Module.php:231
 msgid "Disk quota settings successfully updated"
 msgstr ""
 
-#: Module.php:476 Module.php:493
+#: Module.php:516 Module.php:533
 msgid "User Quota (MB)"
 msgstr ""
 
-#: Module.php:477
+#: Module.php:517
 msgid "Set the disk quota for this user in megabytes. Set to 0 for unlimited."
 msgstr ""
 
-#: Module.php:494
+#: Module.php:534
 msgid "Disk quota allocated to this user."
+msgstr ""
+
+#: Module.php:819 Module.php:840
+msgid "Site Quota (MB)"
+msgstr ""
+
+#: Module.php:820
+msgid "Set the disk quota for this site in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: Module.php:841
+msgid "Disk quota allocated to this site."
 msgstr ""
 
 #: src/Form/ConfigForm.php:22
