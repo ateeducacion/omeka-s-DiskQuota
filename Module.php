@@ -25,7 +25,7 @@ class Module extends AbstractModule
 {
     /**
      * Get configuration for this module.
-     * 
+     *
      * @return array The module configuration array
      */
     public function getConfig()
@@ -35,7 +35,7 @@ class Module extends AbstractModule
     
     /**
      * Get the service configuration.
-     * 
+     *
      * Defines the service factories used by this module.
      *
      * @return array Service configuration array
@@ -53,9 +53,9 @@ class Module extends AbstractModule
 
     /**
      * Install this module.
-     * 
+     *
      * Executed when the module is first installed.
-     * 
+     *
      * @param ServiceLocatorInterface $serviceLocator The service locator
      */
     public function install(ServiceLocatorInterface $serviceLocator)
@@ -64,9 +64,9 @@ class Module extends AbstractModule
 
     /**
      * Uninstall this module.
-     * 
+     *
      * Executed when the module is uninstalled.
-     * 
+     *
      * @param ServiceLocatorInterface $serviceLocator The service locator
      */
     public function uninstall(ServiceLocatorInterface $serviceLocator)
@@ -75,7 +75,7 @@ class Module extends AbstractModule
 
     /**
      * Attach all listeners for disk quota checks and form management.
-     * 
+     *
      * This method registers all event listeners needed for quota enforcement
      * and user interface integration.
      *
@@ -164,9 +164,9 @@ class Module extends AbstractModule
 
     /**
      * Get the module's configuration form.
-     * 
+     *
      * Generates the HTML for the module configuration form in the admin interface.
-     * 
+     *
      * @param PhpRenderer $renderer The view renderer
      * @return string HTML markup for the configuration form
      */
@@ -200,9 +200,9 @@ class Module extends AbstractModule
 
     /**
      * Handle the module's configuration form.
-     * 
+     *
      * Processes the submitted configuration form data and saves settings.
-     * 
+     *
      * @param AbstractController $controller The controller that handled the request
      * @return bool True if form was handled successfully, false otherwise
      */
@@ -235,7 +235,7 @@ class Module extends AbstractModule
 
     /**
      * Check if an upload would exceed the user's quota.
-     * 
+     *
      * Examines file uploads to determine if they would exceed the user's disk quota.
      * If quota would be exceeded, adds an error message and prevents the upload.
      *
@@ -355,10 +355,10 @@ class Module extends AbstractModule
 
     /**
      * Check if an upload would exceed the site's quota.
-     * 
+     *
      * Examines file uploads to determine if they would exceed the site's disk quota.
      * If quota would be exceeded, adds an error message and prevents the upload.
-     * 
+     *
      * @param Event $event The event that triggered this callback
      * @return void
      */
@@ -440,10 +440,10 @@ class Module extends AbstractModule
 
     /**
      * Add quota fields to the user edit form.
-     * 
+     *
      * Adds quota management fields to the user edit form and displays current usage.
      * Administrators can modify quotas while regular users see read-only information.
-     * 
+     *
      * @param Event $event The form event
      * @return void
      */
@@ -600,10 +600,10 @@ class Module extends AbstractModule
         
     /**
      * Display user quota details on the user page.
-     * 
+     *
      * Renders the user's quota usage information on the user details page.
      * Shows current usage, total quota, and file count.
-     * 
+     *
      * @param Event $event The view event
      * @return void
      */
@@ -653,10 +653,10 @@ class Module extends AbstractModule
     
     /**
      * Handle user quota form submission.
-     * 
+     *
      * Processes the submitted user quota settings and saves them.
      * Only administrators can modify quota values.
-     * 
+     *
      * @param Event $event The API event
      * @return void
      */
@@ -703,10 +703,10 @@ class Module extends AbstractModule
     
     /**
      * Add site quota fieldset to site form.
-     * 
+     *
      * Adds quota management fields to the site edit form and displays current usage.
      * Administrators can modify quotas while regular users see read-only information.
-     * 
+     *
      * @param Event $event The form event
      * @return void
      */
@@ -896,10 +896,10 @@ class Module extends AbstractModule
     
     /**
      * Display site quota details on the site page.
-     * 
+     *
      * Renders the site's quota usage information on the site details page.
      * Shows current usage, total quota, and file count.
-     * 
+     *
      * @param Event $event The view event
      * @return void
      */
@@ -975,10 +975,10 @@ class Module extends AbstractModule
     
     /**
      * Handle site quota form submission.
-     * 
+     *
      * Processes the submitted site quota settings and saves them.
      * Only administrators can modify quota values.
-     * 
+     *
      * @param Event $event The API event
      * @return void
      */
@@ -1036,10 +1036,10 @@ class Module extends AbstractModule
     
     /**
      * Check if an upload would exceed the site's quota.
-     * 
+     *
      * Examines file uploads to determine if they would exceed the site's disk quota.
      * If quota would be exceeded, adds an error message and prevents the upload.
-     * 
+     *
      * @param Event $event The event that triggered this callback
      * @return void
      */
