@@ -1,0 +1,68 @@
+{
+    "name": "ateeducacion/omeka-s-diskquota",
+    "description": "Allows administrators to set disk quota limits for sites",
+    "type": "omeka-s-module",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Área de Tecnología Educativa",
+            "email": "ate.educacion@gobiernodecanarias.org"
+        }
+    ],
+    "homepage": "https://github.com/ateeducacion/omeka-s-ThreeDViewer",
+    "support": {
+        "issues": "https://github.com/ateeducacion/omeka-s-ThreeDViewer/issues"
+    },
+    "keywords": [
+        "Omeka S",
+        "module",
+        "quota",
+        "user",
+        "site"
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4"
+        },
+        "allow-plugins": {
+            "omeka/composer-addon-installer": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*",
+        "phpunit/phpunit": "^9.5",
+        "zerocrates/extract-tagged-strings": "dev-master",
+        "laminas/laminas-form": "^3.4",
+        "laminas/laminas-test": "^4.0",
+        "laminas/laminas-servicemanager": "^3.11",
+        "laminas/laminas-eventmanager": "^3.5",
+        "laminas/laminas-mvc": "^3.3",
+        "mikey179/vfsstream": "^1.6",
+        "mockery/mockery": "^1.5",
+        "laminas/laminas-db": "^2.15"
+    },
+    "autoload": {
+        "psr-4": {
+            "DiskQuota\\": "src/"
+        },
+        "classmap": [
+            "Module.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DiskQuotaTest\\": "test/DiskQuotaTest/"
+        }
+    },
+    "repositories": [
+        {
+        "type": "vcs",
+        "url": "https://github.com/zerocrates/extract-tagged-strings.git"
+        }
+    ]
+}

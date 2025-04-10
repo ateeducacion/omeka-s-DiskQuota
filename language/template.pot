@@ -1,0 +1,96 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-10 15:32+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: Module.php:594
+msgid "Unknown"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:12
+msgid "Disk Quota"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:15
+msgid "Usage:"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:18
+msgid "unlimited"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:19
+#, php-format
+msgid "%s MB of %s MB"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:23
+msgid "Total Files:"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:36
+msgid "used"
+msgstr ""
+
+#: Module.php:205
+msgid "Disk quota settings successfully updated"
+msgstr ""
+
+#: Module.php:476 Module.php:493
+msgid "User Quota (MB)"
+msgstr ""
+
+#: Module.php:477
+msgid "Set the disk quota for this user in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: Module.php:494
+msgid "Disk quota allocated to this user."
+msgstr ""
+
+#: src/Form/ConfigForm.php:22
+msgid "Default global quota (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:24
+msgid " Set to 0 to allow unlimited usage."
+msgstr ""
+
+#: src/Form/ConfigForm.php:39
+msgid "Default quota per site (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:40
+msgid "Default disk quota for each site in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: src/Form/ConfigForm.php:55
+msgid "Default quota per user (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:56
+msgid "Default disk quota for each user in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: src/Form/ConfigForm.php:72
+msgid "Warning threshold (%)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:74
+#, php-format
+msgid " E.g., 15 = warn at 85% usage."
+msgstr ""

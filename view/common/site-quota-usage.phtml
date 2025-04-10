@@ -1,0 +1,40 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Omeka\Api\Representation\SiteRepresentation $site
+ * @var int $siteQuota
+ * @var int $currentUsage
+ * @var int $mediaCount
+ */
+?>
+
+<dl>
+    <div class="property">
+        <dt><?= $this->translate('Disk Quota') ?></dt>
+        <dd class="value">
+            <?php if ($siteQuota > 0): ?>
+                <?= $this->translate('Usage:') ?>
+                <?php 
+                $usageMB = number_format($currentUsage / (1024 * 1024), 2);
+                $quotaDisplay = $siteQuota > 0 ? number_format($siteQuota, 0) : $this->translate('unlimited');
+                echo sprintf($this->translate('%s MB of %s MB'), $usageMB, $quotaDisplay);
+                ?>
+                <br>
+                <?= $this->translate('Total Files:') ?>
+                <?= $mediaCount ?>
+                <div class="quota-progress-container" style="position: relative; width: 100%; height: 24px; background-color: #f0f0f0; border-radius: 3px; margin-top: 10px; overflow: hidden; border: 1px solid #dfdfdf;">
+                    <?php 
+                    $percentUsed = min(100, ($currentUsage / ($siteQuota * 1024 * 1024)) * 100);
+                    $barColor = $percentUsed > 90 ? '#e74c3c' : ($percentUsed > 75 ? '#f39c12' : '#2ecc71');
+                    ?>
+                    <div class="quota-progress-bar" style="width: <?= $percentUsed ?>%; height: 100%; background-color: <?= $barColor ?>; transition: width 0.3s ease;"></div>
+                    <div class="quota-progress-label" style="position: absolute; top: 0; right: 8px; height: 100%; display: flex; align-items: center; font-size: 0.85em;">
+                        <?= number_format($percentUsed, 1) ?>%&nbsp;<span><?= $this->translate('used') ?></span>
+                    </div>
+                </div>
+            <?php else: ?>
+                <?= $this->translate('No quota limit set.') ?>
+            <?php endif; ?>
+        </dd>
+    </div>
+</dl>

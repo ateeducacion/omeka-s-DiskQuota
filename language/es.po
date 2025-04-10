@@ -1,0 +1,77 @@
+#: Module.php:594
+msgid "Unknown"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:12
+msgid "Disk Quota"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:15
+msgid "Usage:"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:18
+msgid "unlimited"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:19
+#, php-format
+msgid "%s MB of %s MB"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:23
+msgid "Total Files:"
+msgstr ""
+
+#: view/common/user-quota-usage.phtml:36
+msgid "used"
+msgstr ""
+
+#: Module.php:205
+msgid "Disk quota settings successfully updated"
+msgstr ""
+
+#: Module.php:476 Module.php:493
+msgid "User Quota (MB)"
+msgstr ""
+
+#: Module.php:477
+msgid "Set the disk quota for this user in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: Module.php:494
+msgid "Disk quota allocated to this user."
+msgstr ""
+
+#: src/Form/ConfigForm.php:22
+msgid "Default global quota (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:24
+msgid " Set to 0 to allow unlimited usage."
+msgstr ""
+
+#: src/Form/ConfigForm.php:39
+msgid "Default quota per site (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:40
+msgid "Default disk quota for each site in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: src/Form/ConfigForm.php:55
+msgid "Default quota per user (MB)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:56
+msgid "Default disk quota for each user in megabytes. Set to 0 for unlimited."
+msgstr ""
+
+#: src/Form/ConfigForm.php:72
+msgid "Warning threshold (%)"
+msgstr ""
+
+#: src/Form/ConfigForm.php:74
+#, php-format
+msgid " E.g., 15 = warn at 85% usage."
+msgstr ""
