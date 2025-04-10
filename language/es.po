@@ -1,10 +1,18 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: DiskQuota\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-10 18:07+0100\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
 #: Module.php:640
 msgid "Unknown"
 msgstr "Desconocido"
 
 #: view/common/site-quota-usage.phtml:13 view/common/user-quota-usage.phtml:12
 msgid "Disk Quota"
-msgstr "Cuota de Disco"
+msgstr "Cuota de disco"
 
 #: view/common/site-quota-usage.phtml:16 view/common/user-quota-usage.phtml:15
 msgid "Usage:"
@@ -21,15 +29,15 @@ msgstr "%s MB de %s MB"
 
 #: view/common/site-quota-usage.phtml:23 view/common/user-quota-usage.phtml:23
 msgid "Total Files:"
-msgstr "Archivos Totales:"
+msgstr "Total de archivos:"
 
 #: view/common/site-quota-usage.phtml:32 view/common/user-quota-usage.phtml:36
 msgid "used"
-msgstr "usado"
+msgstr "utilizado"
 
 #: view/common/site-quota-usage.phtml:36
 msgid "No quota limit set."
-msgstr "No hay límite de cuota establecido."
+msgstr "No se ha definido límite de cuota."
 
 #: Module.php:231
 msgid "Disk quota settings successfully updated"
@@ -37,11 +45,13 @@ msgstr "Configuración de cuota de disco actualizada correctamente"
 
 #: Module.php:516 Module.php:533
 msgid "User Quota (MB)"
-msgstr "Cuota de Usuario (MB)"
+msgstr "Cuota del usuario (MB)"
 
 #: Module.php:517
 msgid "Set the disk quota for this user in megabytes. Set to 0 for unlimited."
-msgstr "Establece la cuota de disco para este usuario en megabytes. Establece 0 para ilimitado."
+msgstr ""
+"Establece la cuota de disco para este usuario en megabytes. Usa 0 para "
+"ilimitado."
 
 #: Module.php:534
 msgid "Disk quota allocated to this user."
@@ -49,11 +59,13 @@ msgstr "Cuota de disco asignada a este usuario."
 
 #: Module.php:819 Module.php:840
 msgid "Site Quota (MB)"
-msgstr "Cuota del Sitio (MB)"
+msgstr "Cuota del sitio (MB)"
 
 #: Module.php:820
 msgid "Set the disk quota for this site in megabytes. Set to 0 for unlimited."
-msgstr "Establece la cuota de disco para este sitio en megabytes. Establece 0 para ilimitado."
+msgstr ""
+"Establece la cuota de disco para este sitio en megabytes. Usa 0 para "
+"ilimitado."
 
 #: Module.php:841
 msgid "Disk quota allocated to this site."
@@ -61,33 +73,37 @@ msgstr "Cuota de disco asignada a este sitio."
 
 #: src/Form/ConfigForm.php:22
 msgid "Default global quota (MB)"
-msgstr "Cuota global predeterminada (MB)"
+msgstr "Cuota global por defecto (MB)"
 
 #: src/Form/ConfigForm.php:24
 msgid " Set to 0 to allow unlimited usage."
-msgstr " Establece 0 para permitir uso ilimitado."
+msgstr " Usa 0 para permitir uso ilimitado."
 
 #: src/Form/ConfigForm.php:39
 msgid "Default quota per site (MB)"
-msgstr "Cuota predeterminada por sitio (MB)"
+msgstr "Cuota por defecto por sitio (MB)"
 
 #: src/Form/ConfigForm.php:40
 msgid "Default disk quota for each site in megabytes. Set to 0 for unlimited."
-msgstr "Cuota de disco predeterminada para cada sitio en megabytes. Establece 0 para ilimitado."
+msgstr ""
+"Cuota de disco por defecto para cada sitio en megabytes. Usa 0 para "
+"ilimitado."
 
 #: src/Form/ConfigForm.php:55
 msgid "Default quota per user (MB)"
-msgstr "Cuota predeterminada por usuario (MB)"
+msgstr "Cuota por defecto por usuario (MB)"
 
 #: src/Form/ConfigForm.php:56
 msgid "Default disk quota for each user in megabytes. Set to 0 for unlimited."
-msgstr "Cuota de disco predeterminada para cada usuario en megabytes. Establece 0 para ilimitado."
+msgstr ""
+"Cuota de disco por defecto para cada usuario en megabytes. Usa 0 para "
+"ilimitado."
 
 #: src/Form/ConfigForm.php:72
 msgid "Warning threshold (%)"
-msgstr "Umbral de advertencia (%)"
+msgstr "Umbral de aviso (%)"
 
 #: src/Form/ConfigForm.php:74
 #, php-format
 msgid " E.g., 15 = warn at 85% usage."
-msgstr " Ej., 15 = advertir al 85% de uso."
+msgstr " Ej.: 15 = avisar al alcanzar el 85% del uso."
