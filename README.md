@@ -1,6 +1,6 @@
 # DiskQuota Module for Omeka S
 
-![Screenshot of the module](.github/assets/screenshot1.png)
+![Screenshot of the module](https://github.com/ateeducacion/omeka-s-DiskQuota/.github/assets/screenshot1.png)
 
 This module allows administrators to set disk quota limits for users and sites in Omeka S. It prevents users from uploading files that would exceed the quota set for a user or a site.
 
