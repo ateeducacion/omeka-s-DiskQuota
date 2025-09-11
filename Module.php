@@ -1004,9 +1004,6 @@ class Module extends AbstractModule
             return; // Block if not admin
         }
         
-        // Log the data for debugging
-        error_log('DiskQuota: Site form data: ' . print_r($data, true));
-        
         // Check if the quota field was submitted - check both possible locations
         $siteQuota = null;
         if (isset($data['site_settings']['diskquota_site_quota'])) {
