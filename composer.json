@@ -38,10 +38,8 @@
         "phpunit/phpunit": "^9.6",
         "zerocrates/extract-tagged-strings": "dev-master",
         "laminas/laminas-form": "^3.4",
-        "laminas/laminas-test": "^4.0",
         "laminas/laminas-servicemanager": "^3.11",
         "laminas/laminas-eventmanager": "^3.5",
-        "laminas/laminas-mvc": "^3.3",
         "mikey179/vfsstream": "^1.6",
         "mockery/mockery": "^1.5",
         "laminas/laminas-db": "^2.15"

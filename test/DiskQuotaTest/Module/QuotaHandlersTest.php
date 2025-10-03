@@ -129,7 +129,7 @@ class QuotaHandlersTest extends TestCase
         $messenger = $this->getMockBuilder(\stdClass::class)->addMethods(['addSuccess'])->getMock();
         $messenger->expects($this->once())->method('addSuccess');
 
-        $controller = new class extends \Laminas\Mvc\Controller\AbstractController {
+        $controller = new class {
             public $req;
             public $msg;
             public function getRequest()
@@ -139,9 +139,6 @@ class QuotaHandlersTest extends TestCase
             public function messenger()
             {
                 return $this->msg;
-            }
-            public function onDispatch(\Laminas\Mvc\MvcEvent $e)
-            {
             }
         };
         $controller->req = $request;
@@ -179,7 +176,7 @@ class QuotaHandlersTest extends TestCase
         $messenger = $this->getMockBuilder(\stdClass::class)->addMethods(['addErrors'])->getMock();
         $messenger->expects($this->once())->method('addErrors');
 
-        $controller = new class extends \Laminas\Mvc\Controller\AbstractController {
+        $controller = new class {
             public $req;
             public $msg;
             public function getRequest()
@@ -189,9 +186,6 @@ class QuotaHandlersTest extends TestCase
             public function messenger()
             {
                 return $this->msg;
-            }
-            public function onDispatch(\Laminas\Mvc\MvcEvent $e)
-            {
             }
         };
         $controller->req = $request;

@@ -3,18 +3,8 @@ declare(strict_types=1);
 
 namespace DiskQuota;
 
-use Interop\Container\ContainerInterface;
-use Laminas\EventManager\EventManager;
-use Laminas\EventManager\EventManagerAwareInterface;
-use Laminas\EventManager\EventManagerInterface;
-use Laminas\EventManager\SharedEventManager;
 use Laminas\EventManager\SharedEventManagerInterface;
-use Laminas\Navigation;
-use Laminas\Navigation\AbstractContainer;
-use Laminas\Mvc\Controller\AbstractController;
-use Laminas\Mvc\MvcEvent;
 use Laminas\ServiceManager\ServiceLocatorInterface;
-use Laminas\View\Renderer\PhpRenderer;
 use Omeka\Module\AbstractModule;
 use Omeka\Entity\Media;
 use Omeka\Entity\Site;
@@ -167,10 +157,10 @@ class Module extends AbstractModule
      *
      * Generates the HTML for the module configuration form in the admin interface.
      *
-     * @param PhpRenderer $renderer The view renderer
+     * @param \Laminas\View\Renderer\PhpRenderer $renderer The view renderer
      * @return string HTML markup for the configuration form
      */
-    public function getConfigForm(PhpRenderer $renderer)
+    public function getConfigForm($renderer)
     {
         $services = $this->getServiceLocator();
         $config = $services->get('Config');
@@ -203,10 +193,10 @@ class Module extends AbstractModule
      *
      * Processes the submitted configuration form data and saves settings.
      *
-     * @param AbstractController $controller The controller that handled the request
+     * @param \Laminas\Mvc\Controller\AbstractController $controller The controller that handled the request
      * @return bool True if form was handled successfully, false otherwise
      */
-    public function handleConfigForm(AbstractController $controller)
+    public function handleConfigForm($controller)
     {
         $services = $this->getServiceLocator();
         $settings = $services->get('Omeka\Settings');
@@ -271,26 +261,10 @@ class Module extends AbstractModule
     
         // Try to get file size from HTTP request
         $httpRequest = $services->get('Request');
-        if ($httpRequest instanceof \Laminas\Http\Request) {
-            $files = $httpRequest->getFiles()->toArray();
-            if (!empty($files)) {
-                // Traverse the files array to find the first file
-                foreach ($files as $fileData) {
-                    if (is_array($fileData) && !empty($fileData['tmp_name']) &&
-                            file_exists($fileData['tmp_name'])) {
-                        $fileSize = filesize($fileData['tmp_name']);
-                        break;
-                    } elseif (is_array($fileData)) {
-                        // Handle nested file arrays
-                        foreach ($fileData as $nestedFile) {
-                            if (is_array($nestedFile) && !empty($nestedFile['tmp_name']) &&
-                                    file_exists($nestedFile['tmp_name'])) {
-                                $fileSize = filesize($nestedFile['tmp_name']);
-                                break 2;
-                            }
-                        }
-                    }
-                }
+        if (is_object($httpRequest) && method_exists($httpRequest, 'getFiles')) {
+            $filesData = $httpRequest->getFiles();
+            if (is_object($filesData) && method_exists($filesData, 'toArray')) {
+                $fileSize = $this->detectUploadedFileSize($filesData->toArray());
             }
         }
     
@@ -1055,26 +1029,10 @@ class Module extends AbstractModule
         
         // Try to get file size from HTTP request
         $httpRequest = $services->get('Request');
-        if ($httpRequest instanceof \Laminas\Http\Request) {
-            $files = $httpRequest->getFiles()->toArray();
-            if (!empty($files)) {
-                // Traverse the files array to find the first file
-                foreach ($files as $fileData) {
-                    if (is_array($fileData) && !empty($fileData['tmp_name']) &&
-                            file_exists($fileData['tmp_name'])) {
-                        $fileSize = filesize($fileData['tmp_name']);
-                        break;
-                    } elseif (is_array($fileData)) {
-                        // Handle nested file arrays
-                        foreach ($fileData as $nestedFile) {
-                            if (is_array($nestedFile) && !empty($nestedFile['tmp_name']) &&
-                                    file_exists($nestedFile['tmp_name'])) {
-                                $fileSize = filesize($nestedFile['tmp_name']);
-                                break 2;
-                            }
-                        }
-                    }
-                }
+        if (is_object($httpRequest) && method_exists($httpRequest, 'getFiles')) {
+            $filesData = $httpRequest->getFiles();
+            if (is_object($filesData) && method_exists($filesData, 'toArray')) {
+                $fileSize = $this->detectUploadedFileSize($filesData->toArray());
             }
         }
         
@@ -1169,5 +1127,32 @@ class Module extends AbstractModule
                 ));
             }
         }
+    }
+
+    /**
+     * Recursively extract the first uploaded file size from nested arrays.
+     *
+     * This allows quota checks to operate without depending on Laminas HTTP
+     * request classes while still supporting the nested structure Omeka builds
+     * for file uploads.
+     */
+    private function detectUploadedFileSize(array $files): int
+    {
+        foreach ($files as $fileData) {
+            if (!is_array($fileData)) {
+                continue;
+            }
+
+            if (!empty($fileData['tmp_name']) && file_exists($fileData['tmp_name'])) {
+                return (int) filesize($fileData['tmp_name']);
+            }
+
+            $size = $this->detectUploadedFileSize($fileData);
+            if ($size > 0) {
+                return $size;
+            }
+        }
+
+        return 0;
     }
 }
