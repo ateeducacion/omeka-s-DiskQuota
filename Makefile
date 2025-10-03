@@ -57,16 +57,16 @@ build: check-docker
 	docker compose build
 
 # Run the linter to check PHP code style
-lint:
-	vendor/bin/phpcs . --standard=PSR2 --ignore=vendor/,assets/,node_modules/,tests/js/,tests/ --colors --extensions=php
+lint: deps-update
+	"vendor/bin/phpcs" . --standard=PSR2 --ignore=vendor/,assets/,node_modules/,tests/js/,tests/ --colors --extensions=php
 
 # Automatically fix PHP code style issues
-fix:
-	vendor/bin/phpcbf . --standard=PSR2 --ignore=vendor/,assets/,node_modules/,tests/js/,tests/ --colors --extensions=php
+fix: deps-update
+	"vendor/bin/phpcbf" . --standard=PSR2 --ignore=vendor/,assets/,node_modules/,tests/js/,tests/ --colors --extensions=php
 
-# Open a shell inside the omekas container
+# Open a shell inside the omeka container
 shell: check-docker
-	docker compose exec omekas bash
+	docker compose exec omeka sh
 
 # Clean up and stop Docker containers, removing volumes and orphan containers
 clean: check-docker
@@ -142,7 +142,7 @@ i18n: generate-pot update-po check-untranslated compile-mo
 
 # Run unit tests
 .PHONY: test
-test:
+test: deps-update
 	@echo "Running unit tests..."
 	"vendor/bin/phpunit" -c test/phpunit.xml
 
@@ -158,7 +158,10 @@ help:
 	@echo "  build             - Build or rebuild Docker containers"
 	@echo "  pull              - Pull the latest images from the registry"
 	@echo "  clean             - Stop containers and remove volumes and orphans"
-	@echo "  shell             - Open a shell inside the omekas container"
+	@echo "  fresh             - Clean volumes and start again (fresh DB)"
+	@echo "  logs              - Tail container logs"
+	@echo "  ps                - Show container status"
+	@echo "  shell             - Open a shell inside the omeka container"
 	@echo ""
 	@echo "Code quality:"
 	@echo "  lint              - Run PHP linter (PHP_CodeSniffer)"
@@ -177,9 +180,58 @@ help:
 	@echo "  compile-mo        - Compile .mo files from .po files"
 	@echo "  i18n              - Run full translation workflow (generate, update, check, compile)"
 	@echo ""
+	@echo "Data & module:"
+	@echo "  import-sample     - Import sample CSV inside the container"
+	@echo "  enable-module     - Enable this module inside Omeka S"
+	@echo ""
 	@echo "Other:"
 	@echo "  help              - Show this help message"
 	@echo ""
 
 # Set help as the default goal if no target is specified
 .DEFAULT_GOAL := help
+
+# Dependency management
+.PHONY: check-composer
+check-composer:
+	@command -v composer >/dev/null 2>&1 || (echo "Error: composer not found in PATH. Please install Composer and try again." && exit 1)
+
+.PHONY: deps-update
+deps-update: check-composer
+	@# If vendor is missing, install/update regardless of outdated status
+	@if [ ! -d vendor ]; then \
+	  echo "vendor/ not found. Running composer update to install dependencies..."; \
+	  composer update --with-dependencies --no-interaction; \
+	  exit 0; \
+	fi
+	@echo "Checking for outdated direct dependencies..."
+	@OUTDATED=$$(composer outdated --direct --no-interaction 2>/dev/null || true); \
+	if [ -z "$$OUTDATED" ] || echo "$$OUTDATED" | grep -qi "No outdated packages"; then \
+	  echo "No direct dependencies outdated. Skipping composer update."; \
+	else \
+	  echo "Outdated direct dependencies found:"; \
+	  echo "$$OUTDATED"; \
+	  echo "Running composer update --with-dependencies..."; \
+	  composer update --with-dependencies --no-interaction; \
+	fi
+
+.PHONY: deps-outdated
+deps-outdated: check-composer
+	composer outdated --direct --no-interaction
+
+# Convenience targets
+logs:
+	docker compose logs -f --tail=200
+
+ps:
+	docker compose ps
+
+fresh: clean upd
+
+import-sample:
+	@echo "Importing sample CSV inside the container..."
+	docker compose exec omeka sh -lc 'php import_cli.php "$$OMEKA_CSV_IMPORT_FILE"'
+
+enable-module:
+	@echo "Enabling DiskQuota module inside Omeka S..."
+	docker compose exec omeka sh -lc 'omeka-s-cli module:install DiskQuota || true'

@@ -2,61 +2,62 @@
 
 ![Screenshot of the module](https://github.com/ateeducacion/omeka-s-DiskQuota/blob/main/.github/assets/screenshot1.png)
 
-This module allows administrators to set disk quota limits for users and sites in Omeka S. It prevents users from uploading files that would exceed the quota set for a user or a site.
+DiskQuota lets administrators set and enforce per-user and per-site storage limits in Omeka S. It tracks usage and blocks uploads that would exceed configured quotas.
 
 ## Features
 
-- Set a maximum storage limit (quota) per user and per site
-- Track current storage usage of each user and site
-- Prevent uploads that would exceed the user's or site's quota
-- Display quota information in the admin panel
-- Provide a dedicated section for managing quotas
+- Set max storage per user and per site
+- Track current storage usage per user/site
+- Block uploads that exceed quota
+- Admin UI for viewing and managing quotas
 
+## Quick Start (Docker)
 
-## Installation
+- Requirements: Docker Desktop 4+, Make
+- Start stack: `make up` then open `http://localhost:8080`
+- Stop stack: `make down`
 
-### Manual Installation
+This dev stack uses `erseco/alpine-omeka-s:develop` (service `omeka`) and `mariadb`. Your module is mounted at `/var/www/html/volume/modules/DiskQuota`.
 
-1. Download the latest release from the GitHub repository
-2. Extract the zip file to your Omeka S `modules` directory
-3. Log in to the Omeka S admin panel and navigate to Modules
-5. Click "Install" next to DiskQuota
+### Sample Data (optional)
 
-### Using Docker
+- Place a CSV at `data/sample_data.csv` and it will be auto-imported on first boot when CSVImport is available.
+- Import manually any time: `make import-sample`
 
-A Docker Compose file is provided for easy testing:
+Default admin user (created on first boot):
+- `admin@example.com` password: `PLEASE_CHANGEME`
 
-1. Make sure you have Docker and Docker Compose installed
-2. Clone this repository
-3. From the repository root, run:
+### Useful Make Targets
 
-```bash
-make up
-```
+- `make up` / `make upd`: Run in foreground/background
+- `make down` / `make clean`: Stop, optionally remove volumes
+- `make logs` / `make ps`: Tail logs, show status
+- `make shell`: Shell into the `omeka` container
+- `make enable-module`: Enable DiskQuota inside Omeka S
+- `make test`: Run PHPUnit tests
+- `make package VERSION=x.y.z`: Build a distributable ZIP
 
-4. Wait for the containers to start (this may take a minute)
-5. Access Omeka S at http://localhost:8080
-6. Finish the installation and login as admin user
-7. Navigate to Modules and install the DiskQuota module
+Run `make help` to see all targets.
 
-## Installation
+## Manual Installation
 
-See general end user documentation for [Installing a module](http://omeka.org/s/docs/user-manual/modules/#installing-modules)
+1. Download the latest release from the GitHub releases page
+2. Extract the ZIP into your Omeka S `modules` directory as `DiskQuota/`
+3. In Omeka S admin, go to Modules and click Install on DiskQuota
+
+See the official docs for [Installing a module](http://omeka.org/s/docs/user-manual/modules/#installing-modules).
 
 ## Usage
 
-1. Once installed, navigate to the admin panel
-2. To set a user quota:
-   - Go to Users section
-   - Select a user and click on the "User Settings" tab
-   - Set the desired quota size in megabytes (MB)
-3. To set a site quota:
-   - Navigate to any site's admin panel
-   - Click on the "Site admin" tab in the left sidebar
-   - Set the desired quota size in megabytes (MB)
-4. To set unlimited quota for either users or sites, enter 0
+1. In the admin panel, set user quotas:
+   - Go to Users → select a user → User Settings tab
+   - Set the desired quota in megabytes (MB)
+2. Set site quotas:
+   - Go to a Site’s admin → Site admin tab
+   - Set the desired quota in megabytes (MB)
+3. Use `0` for unlimited.
 
-The module will automatically track usage and prevent uploads that would exceed the quota.
+Uploads that exceed the configured quota are blocked.
 
 ## Requirements
 
@@ -64,4 +65,4 @@ The module will automatically track usage and prevent uploads that would exceed 
 
 ## License
 
-This module is published under the [GNU GPLv3](LICENSE) license.
+Published under the [GNU GPLv3](LICENSE).
