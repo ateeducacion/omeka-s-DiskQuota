@@ -1,6 +1,6 @@
 # DiskQuota Module for Omeka S
 
-![Screenshot of the module](https://github.com/ateeducacion/omeka-s-DiskQuota/blob/main/.github/assets/screenshot1.png)
+![Screenshot of the module](https://raw.githubusercontent.com/ateeducacion/omeka-s-DiskQuota/refs/heads/main/.github/assets/screenshot1.png)
 
 DiskQuota lets administrators set and enforce per-user and per-site storage limits in Omeka S. It tracks usage and blocks uploads that would exceed configured quotas.
 
