@@ -21,11 +21,11 @@
         "site"
     ],
     "require": {
-        "php": ">=7.4"
+        "php": ">=8.1"
     },
     "config": {
         "platform": {
-            "php": "7.4"
+            "php": "8.1"
         },
         "allow-plugins": {
             "omeka/composer-addon-installer": true
@@ -35,7 +35,7 @@
     "prefer-stable": true,
     "require-dev": {
         "squizlabs/php_codesniffer": "*",
-        "phpunit/phpunit": "^9.5",
+        "phpunit/phpunit": "^9.6",
         "zerocrates/extract-tagged-strings": "dev-master",
         "laminas/laminas-form": "^3.4",
         "laminas/laminas-test": "^4.0",

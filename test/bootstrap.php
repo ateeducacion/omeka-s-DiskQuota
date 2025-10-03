@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace DiskQuotaTest;
 
+// Silence vendor deprecations during tests (PHP 8.3 + Laminas)
+// Prefer updating dev dependencies to PHP 8.3-compatible versions long-term.
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 // Load Omeka stubs

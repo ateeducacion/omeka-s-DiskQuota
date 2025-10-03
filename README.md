@@ -62,6 +62,7 @@ Uploads that exceed the configured quota are blocked.
 ## Requirements
 
 - Omeka S 4.x or later
+- PHP 8.1+ (module and tests)
 
 ## License
 
