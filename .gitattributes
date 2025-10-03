@@ -1,5 +1,6 @@
 .aider*                  export-ignore
 .DS_Store                export-ignore
+/.data/					 export-ignore
 /.distignore             export-ignore
 /.editorconfig           export-ignore
 /.env                    export-ignore
