@@ -8,6 +8,7 @@
 /.github/                export-ignore
 /.gitignore              export-ignore
 /.php-cs-fixer.dist.php  export-ignore
+blueprint.json           export-ignore
 /.tx/                    export-ignore
 /language/*.po           export-ignore
 /language/*.pot          export-ignore
