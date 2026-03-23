@@ -1,5 +1,14 @@
 {
   "$schema": "https://ateeducacion.github.io/omeka-s-playground/assets/blueprints/blueprint-schema.json",
+  "meta": {
+    "title": "DiskQuota Playground Blueprint",
+    "author": "ateeducacion",
+    "description": "Blueprint de pruebas para DiskQuota con usuarios adicionales y recursos con media para validar cuotas por usuario y por sitio."
+  },
+  "preferredVersions": {
+    "php": "8.3",
+    "omeka": "4.2.0"
+  },
   "debug": {
     "enabled": true
   },
@@ -9,12 +18,31 @@
     "locale": "es",
     "timezone": "Atlantic/Canary"
   },
+  "login": {
+    "email": "admin@example.com",
+    "password": "password"
+  },
   "users": [
     {
       "username": "admin",
       "email": "admin@example.com",
       "password": "password",
-      "role": "global_admin"
+      "role": "global_admin",
+      "isActive": true
+    },
+    {
+      "username": "editor",
+      "email": "editor@example.com",
+      "password": "password",
+      "role": "editor",
+      "isActive": true
+    },
+    {
+      "username": "author",
+      "email": "author@example.com",
+      "password": "password",
+      "role": "author",
+      "isActive": true
     }
   ],
   "modules": [
@@ -27,11 +55,58 @@
       }
     }
   ],
+  "itemSets": [
+    {
+      "title": "Recursos de prueba DiskQuota",
+      "description": "Colección con recursos de ejemplo para comprobar uso en disco y cuotas del sitio."
+    }
+  ],
+  "items": [
+    {
+      "title": "Imagen de prueba del playground",
+      "description": "Recurso de ejemplo con imagen para comprobar que el sitio ya tiene consumo inicial.",
+      "creator": "Omeka S Playground",
+      "itemSets": ["Recursos de prueba DiskQuota"],
+      "media": [
+        {
+          "type": "url",
+          "url": "./assets/samples/playground-sample.png",
+          "title": "Playground sample image"
+        }
+      ]
+    },
+    {
+      "title": "Pintura de prueba del playground",
+      "description": "Segundo recurso de ejemplo para incrementar el uso en disco del sitio de demostración.",
+      "creator": "George Frederic Watts",
+      "itemSets": ["Recursos de prueba DiskQuota"],
+      "media": [
+        {
+          "type": "url",
+          "url": "./assets/samples/thomas-carlyle-oil-painting-1868.jpg",
+          "title": "Thomas Carlyle Oil Painting 1868"
+        }
+      ]
+    },
+    {
+      "title": "Audio de prueba del playground",
+      "description": "Muestra de audio pública para probar cuotas con un tercer medio adicional.",
+      "creator": "Ludwig van Beethoven",
+      "itemSets": ["Recursos de prueba DiskQuota"],
+      "media": [
+        {
+          "type": "url",
+          "url": "./assets/samples/beethoven-public-domain.ogg",
+          "title": "Public domain Beethoven recording"
+        }
+      ]
+    }
+  ],
   "site": {
     "title": "DiskQuota Demo",
     "slug": "demo",
     "theme": "default",
-    "summary": "Instalacion minima para probar el modulo DiskQuota en Omeka S Playground.",
+    "summary": "Instalación de pruebas para DiskQuota con usuarios adicionales y recursos de ejemplo ya asociados al sitio.",
     "isPublic": true,
     "setAsDefault": true
   }
