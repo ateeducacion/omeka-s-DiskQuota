@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace DiskQuotaTest\Module;
 
-use DiskQuota\Module;
 use Laminas\EventManager\Event;
 use Laminas\ServiceManager\ServiceManager;
 use PHPUnit\Framework\TestCase;
@@ -41,8 +40,8 @@ class QuotaSettingsTest extends TestCase
             'request' => $this->double(['getContent' => $quota === null ? [] : [$key => [$field => $quota]]]),
             'response' => $this->double(['getContent' => $resource]),
         ]);
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $class = 'DiskQuota\\Listener\\' . $kind . 'QuotaListener';
+        $module = new $class($services);
         $method = 'handle' . $kind . 'QuotaForm';
         $module->$method($event);
     }

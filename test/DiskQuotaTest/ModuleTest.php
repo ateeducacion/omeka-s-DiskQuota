@@ -61,15 +61,34 @@ class ModuleTest extends TestCase
     
     public function testAttachListeners(): void
     {
-        $sharedEventManagerMock = $this->createMock(SharedEventManager::class);
-        
-        // Verify that the expected events are attached
-        $sharedEventManagerMock->expects($this->atLeastOnce())
-            ->method('attach');
-        
-        $this->module->attachListeners($sharedEventManagerMock);
+        $services = new ServiceManager($this->module->getServiceConfig());
+        $this->module->setServiceLocator($services);
+        $events = new SharedEventManager();
+        $this->module->attachListeners($events);
+        $uploads = $services->get(\DiskQuota\Listener\UploadQuotaListener::class);
+        $users = $services->get(\DiskQuota\Listener\UserQuotaListener::class);
+        $sites = $services->get(\DiskQuota\Listener\SiteQuotaListener::class);
+        $expected = [
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.create.pre', $uploads, 'checkUserQuotaBeforeUpload'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.create.pre', $uploads, 'checkSiteQuotaBeforeUpload'],
+            ['Omeka\\Form\\UserForm', 'form.add_elements', $users, 'addUserQuotaFieldset'],
+            ['Omeka\\Controller\\Admin\\User', 'view.details', $users, 'viewUserQuotaDetails'],
+            ['Omeka\\Api\\Adapter\\UserAdapter', 'api.update.post', $users, 'handleUserQuotaForm'],
+            ['Omeka\\Form\\SiteForm', 'form.add_elements', $sites, 'addSiteQuotaFieldset'],
+            ['Omeka\\Controller\\SiteAdmin\\Index', 'view.show.after', $sites, 'viewSiteQuotaDetails'],
+            ['Omeka\\Api\\Adapter\\SiteAdapter', 'api.update.post', $sites, 'handleSiteQuotaForm'],
+            ['Omeka\\Controller\\SiteAdmin\\Index', 'site.save.post', $sites, 'handleSiteQuotaForm'],
+        ];
+        foreach ($expected as [$target, $event, $listener, $method]) {
+            $registered = $events->getListeners([$target], $event);
+            $callbacks = array_merge(...array_values($registered));
+            $this->assertContains([$listener, $method], $callbacks);
+            $this->assertIsCallable([$listener, $method]);
+        }
     }
-    
+
     public function testFactoryCreatesQuotaManager(): void
     {
         $config = $this->module->getServiceConfig();

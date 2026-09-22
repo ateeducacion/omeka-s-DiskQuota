@@ -53,4 +53,30 @@ class ConfigFormTest extends TestCase
         
         $this->assertFalse($this->form->isValid());
     }
+    /** @dataProvider validationBoundaries */
+    public function testValidationBoundaries(string $name, int $value, bool $valid): void
+    {
+        $data = [
+            'diskquota_default_global_quota' => 10000,
+            'diskquota_default_site_quota' => 1000,
+            'diskquota_default_user_quota' => 500,
+            'diskquota_warning_threshold' => 15,
+        ];
+        $data[$name] = $value;
+        $this->form->setData($data);
+        $this->assertSame($valid, $this->form->isValid());
+    }
+
+    public function validationBoundaries(): array
+    {
+        $cases = [];
+        foreach (['site', 'user', 'global'] as $scope) {
+            $cases[] = ['diskquota_default_' . $scope . '_quota', -1, false];
+            $cases[] = ['diskquota_default_' . $scope . '_quota', 0, true];
+        }
+        foreach ([0 => false, 1 => true, 50 => true, 51 => false] as $value => $valid) {
+            $cases[] = ['diskquota_warning_threshold', $value, $valid];
+        }
+        return $cases;
+    }
 }
