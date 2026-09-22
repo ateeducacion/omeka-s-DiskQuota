@@ -5,19 +5,26 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   build_and_upload:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Upload the ZIP to the published release.
     steps:
       # Checkout the code
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set environment variables
         run: |
           echo "RELEASE_TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
       - name: Create package using the Makefile
-        run: make package VERSION=${RELEASE_TAG}
+        run: make package VERSION="$RELEASE_TAG"
 
       - name: Upload ZIP to the release
         uses: softprops/action-gh-release@v3

@@ -5,7 +5,9 @@ description: "Change upload quota checks, user/site quota settings, or disk-usag
 
 # Quota enforcement
 
-Trace `Module.php` upload hooks through `src/Service/DiskQuotaManager.php` and the settings forms.
+Trace the event registrations in `Module.php` through `src/Listener/*QuotaListener.php`,
+`src/Service/UploadSizeResolver.php`, `src/Service/DiskQuotaManager.php`, and the settings forms.
+The listener services own upload checks and user/site display and settings handlers.
 
 - Settings are expressed in MB; usage is bytes. Preserve the `1024 * 1024` conversion and the
   nonpositive/unlimited convention. An upload reaches the limit legally; exceeding it is rejected.

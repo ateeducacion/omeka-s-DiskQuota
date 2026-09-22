@@ -83,61 +83,28 @@ class ConfigForm extends Form
         ]);
 
         
-        // Add input filters for validation
-        $inputFilter = $this->getInputFilter();
-        
-        $inputFilter->add([
-            'name' => 'diskquota_default_site_quota',
-            'required' => true,
-            'filters' => [
-                ['name' => 'ToInt'],
-            ],
-            'validators' => [
-                [
+        $this->addQuotaFilters();
+        $this->addWarningFilter();
+    }
+
+    private function addQuotaFilters(): void
+    {
+        foreach (['site', 'user', 'global'] as $scope) {
+            $this->getInputFilter()->add([
+                'name' => 'diskquota_default_' . $scope . '_quota',
+                'required' => true,
+                'filters' => [['name' => 'ToInt']],
+                'validators' => [[
                     'name' => 'GreaterThan',
-                    'options' => [
-                        'min' => -1,
-                        'inclusive' => false,
-                    ],
-                ],
-            ],
-        ]);
-        
-        $inputFilter->add([
-            'name' => 'diskquota_default_user_quota',
-            'required' => true,
-            'filters' => [
-                ['name' => 'ToInt'],
-            ],
-            'validators' => [
-                [
-                    'name' => 'GreaterThan',
-                    'options' => [
-                        'min' => -1,
-                        'inclusive' => false,
-                    ],
-                ],
-            ],
-        ]);
-        
-        $inputFilter->add([
-            'name' => 'diskquota_default_global_quota',
-            'required' => true,
-            'filters' => [
-                ['name' => 'ToInt'],
-            ],
-            'validators' => [
-                [
-                    'name' => 'GreaterThan',
-                    'options' => [
-                        'min' => -1,
-                        'inclusive' => false,
-                    ],
-                ],
-            ],
-        ]);
-        
-        $inputFilter->add([
+                    'options' => ['min' => -1, 'inclusive' => false],
+                ]],
+            ]);
+        }
+    }
+
+    private function addWarningFilter(): void
+    {
+        $this->getInputFilter()->add([
             'name' => 'diskquota_warning_threshold',
             'required' => true,
             'filters' => [

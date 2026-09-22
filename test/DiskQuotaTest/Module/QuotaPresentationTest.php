@@ -46,8 +46,7 @@ class QuotaPresentationTest extends TestCase
             'currentUsage' => $siteId === 10 ? 500 : 0,
             'mediaCount' => $siteId === 10 ? 3 : 0,
         ]);
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $module = new \DiskQuota\Listener\SiteQuotaListener($services);
         if ($formPage) {
             $plugins = new ServiceManager();
             $plugins->setService('currentSite', function () use ($site) {
@@ -111,8 +110,7 @@ class QuotaPresentationTest extends TestCase
             'user' => $user, 'userQuota' => 500, 'currentUsage' => 123,
             'mediaCount' => $apiFails ? 'Unknown' : 2,
         ]);
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $module = new \DiskQuota\Listener\UserQuotaListener($services);
         if ($formPage) {
             $services->setService('Omeka\EntityManager', $this->double(['find' => $user]));
             $actor = $this->double(['getRole' => $admin ? 'global_admin' : 'editor']);
@@ -147,18 +145,19 @@ class QuotaPresentationTest extends TestCase
 
     public function testUnrelatedFormsAndMissingSiteAreIgnored(): void
     {
-        $module = new Module();
-        $module->setServiceLocator(new ServiceManager());
+        $services = new ServiceManager();
+        $users = new \DiskQuota\Listener\UserQuotaListener($services);
+        $sites = new \DiskQuota\Listener\SiteQuotaListener($services);
         $event = new Event('form.add_elements', new \Laminas\Form\Form());
-        $module->addUserQuotaFieldset($event);
-        $module->addSiteQuotaFieldset($event);
+        $users->addUserQuotaFieldset($event);
+        $sites->addSiteQuotaFieldset($event);
         $form = new \Omeka\Form\SiteForm();
-        $module->addSiteQuotaFieldset(new Event('form.add_elements', $form));
+        $sites->addSiteQuotaFieldset(new Event('form.add_elements', $form));
         $this->assertFalse($form->has('site_settings'));
         $view = new \stdClass();
         $view->site = null;
         $this->expectOutputString('');
-        $module->viewSiteQuotaDetails(new Event('view.show.after', $view));
+        $sites->viewSiteQuotaDetails(new Event('view.show.after', $view));
     }
 
     public function testConfigFormRendersStoredValuesAndDefaults(): void

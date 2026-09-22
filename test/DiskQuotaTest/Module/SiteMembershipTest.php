@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace DiskQuotaTest\Module;
 
-use DiskQuota\Module;
+use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Service\DiskQuotaManager;
 use DiskQuotaTest\SiteFixture;
 use Laminas\EventManager\Event;
@@ -36,8 +36,7 @@ class SiteMembershipTest extends TestCase
         $services->setService('Omeka\Connection', $this->createSiteDatabase());
         $services->setService('DiskQuota\DiskQuotaManager', $manager);
         $services->setService('Request', new \stdClass());
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $module = new UploadQuotaListener($services);
         $module->checkSiteQuotaBeforeUpload($this->uploadEvent($itemId, $errors));
         $this->assertSame($checked, $actual);
     }
@@ -72,8 +71,7 @@ class SiteMembershipTest extends TestCase
             $services->setService('Omeka\Connection', $this->createSiteDatabase());
             $services->setService('DiskQuota\DiskQuotaManager', $manager);
             $services->setService('Request', $http);
-            $module = new Module();
-            $module->setServiceLocator($services);
+            $module = new UploadQuotaListener($services);
             $module->checkSiteQuotaBeforeUpload($this->uploadEvent(4, $errors));
             $this->assertSame(100, filesize($file));
             $mediaCount = $services->get('Omeka\Connection')->query('SELECT COUNT(*) FROM media')->fetchColumn();
@@ -99,8 +97,7 @@ class SiteMembershipTest extends TestCase
         $services = new ServiceManager();
         $services->setService('Request', new Request());
         $services->setService('DiskQuota\\DiskQuotaManager', $manager);
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $module = new UploadQuotaListener($services);
         $module->checkSiteQuotaBeforeUpload(new Event('api.create.pre', null, ['request' => $request]));
     }
 
@@ -132,8 +129,7 @@ class SiteMembershipTest extends TestCase
         $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
         $request->method('getOperation')->willReturn('create');
         $request->method('getContent')->willReturn(['o:item' => ['o:id' => 1], 'o:size' => $bytes]);
-        $module = new Module();
-        $module->setServiceLocator($services);
+        $module = new UploadQuotaListener($services);
         $module->checkSiteQuotaBeforeUpload(new Event('api.create.pre', null, [
             'request' => $request, 'errorStore' => $errors,
         ]));
