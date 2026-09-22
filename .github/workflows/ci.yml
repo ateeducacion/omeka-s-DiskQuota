@@ -7,20 +7,29 @@ on:
     tags:
       - '*'
     branches:
-      - '*' 
+      - '**'
+
+permissions:
+  contents: read
 
 jobs:
   lint_and_test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       # Checkout the code
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: PHP setup
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mbstring, intl, curl, dom, json, pdo, mysql, xml, zip
+          coverage: pcov
+          extensions: mbstring, intl, curl, dom, json, pdo, pdo_sqlite, mysql, xml, zip
           tools: composer
 
       - name: Install dependencies
@@ -32,14 +41,19 @@ jobs:
       - name: Check untranslated strings
         run: make check-untranslated
 
-      - name: Check untranslated strings
-        run: make check-untranslated
-
-      - name: Check untranslated strings
+      - name: Compile translations
         run: make compile-mo
 
       - name: Run code linting
-        run: make lint
+        run: vendor/bin/phpcs . --standard=PSR2 --ignore=vendor/,assets/,node_modules/,tests/js/,tests/ --colors --extensions=php
 
-      - name: Run unit tests
-        run: make test
+      - name: Run unit tests with coverage
+        run: make test-coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: coverage.xml
+          disable_search: true
+          fail_ci_if_error: true

@@ -778,16 +778,12 @@ class Module extends AbstractModule
             try {
                 $connection = $services->get('Omeka\Connection');
                 $stmt = $connection->prepare('
-                    SELECT COUNT(DISTINCT m.id) 
+                    SELECT COUNT(m.id)
                     FROM media m
-                    JOIN item i ON m.item_id = i.id
-                    LEFT JOIN item_item_set iis ON iis.item_id = i.id
-                    LEFT JOIN site_item_set sis ON sis.item_set_id = iis.item_set_id
-                    LEFT JOIN item_site si ON si.item_id = i.id
-                    WHERE (sis.site_id = ? OR si.site_id = ?) AND m.has_original = 1
+                    JOIN item_site si ON si.item_id = m.item_id
+                    WHERE si.site_id = ? AND m.has_original = 1
                 ');
                 $stmt->bindValue(1, $siteId);
-                $stmt->bindValue(2, $siteId);
                 $stmt->execute();
                 $mediaCount = $stmt->fetchColumn();
             } catch (\Exception $e) {
@@ -936,25 +932,14 @@ class Module extends AbstractModule
             $connection = $services->get('Omeka\Connection');
 
             $sql = "
-                SELECT COUNT(DISTINCT m.id) AS total_media
+                SELECT COUNT(m.id) AS total_media
                 FROM media m
-                JOIN item i ON i.id = m.item_id
-                WHERE i.id IN (
-                    SELECT si.item_id
-                    FROM item_site si
-                    WHERE si.site_id = ?
-                    UNION
-                    SELECT iis.item_id
-                    FROM item_item_set iis
-                    JOIN site_item_set sis ON sis.item_set_id = iis.item_set_id
-                    WHERE sis.site_id = ?
-                )
-                AND m.has_original = 1
+                JOIN item_site si ON si.item_id = m.item_id
+                WHERE si.site_id = ? AND m.has_original = 1
             ";
 
             $stmt = $connection->prepare($sql);
             $stmt->bindValue(1, $site->id(), \PDO::PARAM_INT);
-            $stmt->bindValue(2, $site->id(), \PDO::PARAM_INT);
             $stmt->execute();
 
             $mediaCount = (int) $stmt->fetchColumn() ?: 0;
@@ -1050,6 +1035,8 @@ class Module extends AbstractModule
             return;
         }
         
+        $data = $request->getContent();
+
         // Initialize file size
         $fileSize = 0;
         
@@ -1080,8 +1067,6 @@ class Module extends AbstractModule
         
         // If we couldn't get file size from HTTP request, try to infer it from content data
         if ($fileSize <= 0) {
-            $data = $request->getContent();
-            
             // Check if there's a 'data' field with a size property (for OmekaS API uploads)
             if (!empty($data['data']) && !empty($data['data']['size'])) {
                 $fileSize = (int)$data['data']['size'];
@@ -1096,77 +1081,62 @@ class Module extends AbstractModule
             return;
         }
         
-        // Try to determine which site this upload belongs to
-        $siteId = null;
-        
-        // If this is a media being added to an item, get the item's site
+        // Check every site the item is assigned to, regardless of attached item sets.
+        $siteIds = [];
         if (!empty($data['o:item']['o:id'])) {
             $itemId = $data['o:item']['o:id'];
-            
             try {
-                // Check if item is directly assigned to a site
                 $connection = $services->get('Omeka\Connection');
-                $stmt = $connection->prepare('SELECT site_id FROM item_site WHERE item_id = ? LIMIT 1');
+                $stmt = $connection->prepare('SELECT site_id FROM item_site WHERE item_id = ?');
                 $stmt->bindValue(1, $itemId);
                 $stmt->execute();
-                $siteId = $stmt->fetchColumn();
-                
-                // If not found, check if item is in a site item set
-                if (!$siteId) {
-                    $stmt = $connection->prepare('
-                        SELECT sis.site_id 
-                        FROM site_item_set sis
-                        JOIN item_item_set iis ON sis.item_set_id = iis.item_set_id
-                        WHERE iis.item_id = ?
-                        LIMIT 1
-                    ');
-                    $stmt->bindValue(1, $itemId);
-                    $stmt->execute();
-                    $siteId = $stmt->fetchColumn();
+                while (($siteId = $stmt->fetchColumn()) !== false) {
+                    $siteIds[] = (int) $siteId;
                 }
             } catch (\Exception $e) {
                 error_log('DiskQuota: Error determining site for item: ' . $e->getMessage());
             }
         }
-        
-        // Skip if we couldn't determine the site
-        if (!$siteId) {
+
+        if (!$siteIds) {
             return;
         }
-        
+
         // Get the disk quota manager
         $diskQuotaManager = $services->get('DiskQuota\DiskQuotaManager');
         
-        // Check if upload would exceed quota
-        if ($diskQuotaManager->isSiteQuotaExceeded($siteId, $fileSize)) {
-            // Get the site's quota and current usage for the error message
-            $quota = $diskQuotaManager->getSiteQuota($siteId);
-            $usedSpace = $diskQuotaManager->getUsedDiskSpaceBySite($siteId);
+        foreach ($siteIds as $siteId) {
+            // Check if upload would exceed quota
+            if ($diskQuotaManager->isSiteQuotaExceeded($siteId, $fileSize)) {
+                // Get the site's quota and current usage for the error message
+                $quota = $diskQuotaManager->getSiteQuota($siteId);
+                $usedSpace = $diskQuotaManager->getUsedDiskSpaceBySite($siteId);
             
-            // Format sizes for display
-            $usedMB = round($usedSpace / (1024 * 1024), 2);
-            $quotaMB = round($quota / (1024 * 1024), 2);
-            $fileSizeMB = round($fileSize / (1024 * 1024), 2);
+                // Format sizes for display
+                $usedMB = round($usedSpace / (1024 * 1024), 2);
+                $quotaMB = round($quota / (1024 * 1024), 2);
+                $fileSizeMB = round($fileSize / (1024 * 1024), 2);
             
-            // Log the error
-            $msg = sprintf(
-                'DiskQuota: Upload rejected for site %d. File size: %s MB, Used: %s MB, Limit: %s MB',
-                $siteId,
-                $fileSizeMB,
-                $usedMB,
-                $quotaMB
-            );
-            error_log($msg);
-            
-            // If quota exceeded, add error message and block upload
-            $errorStore = $event->getParam('errorStore');
-            if ($errorStore) {
-                $errorStore->addError('file', new \Omeka\Stdlib\Message(
-                    'Upload rejected: site quota exceeded. File: %s MB, Used: %s MB, Limit: %s MB',
+                // Log the error
+                $msg = sprintf(
+                    'DiskQuota: Upload rejected for site %d. File size: %s MB, Used: %s MB, Limit: %s MB',
+                    $siteId,
                     $fileSizeMB,
                     $usedMB,
                     $quotaMB
-                ));
+                );
+                error_log($msg);
+
+                // If quota exceeded, add error message and block upload
+                $errorStore = $event->getParam('errorStore');
+                if ($errorStore) {
+                    $errorStore->addError('file', new \Omeka\Stdlib\Message(
+                        'Upload rejected: site quota exceeded. File: %s MB, Used: %s MB, Limit: %s MB',
+                        $fileSizeMB,
+                        $usedMB,
+                        $quotaMB
+                    ));
+                }
             }
         }
     }

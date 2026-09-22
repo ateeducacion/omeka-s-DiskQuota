@@ -1,5 +1,7 @@
 # DiskQuota Module for Omeka S
 
+[![codecov](https://codecov.io/gh/ateeducacion/omeka-s-DiskQuota/branch/main/graph/badge.svg)](https://codecov.io/gh/ateeducacion/omeka-s-DiskQuota)
+
 <a href="https://ateeducacion.github.io/omeka-s-playground/?blueprint=https%3A%2F%2Fraw.githubusercontent.com%2Fateeducacion%2Fomeka-s-DiskQuota%2Frefs%2Fheads%2Fmain%2Fblueprint.json">
   <img src="https://raw.githubusercontent.com/ateeducacion/omeka-s-DiskQuota/refs/heads/main/.github/assets/playground-preview-button.svg" alt="Try DiskQuota in your browser" width="224">
 </a><br>
@@ -40,6 +42,7 @@ Default admin user (created on first boot):
 - `make shell`: Shell into the `omeka` container
 - `make enable-module`: Enable DiskQuota inside Omeka S
 - `make test`: Run PHPUnit tests
+- `make test-coverage`: Generate `coverage.xml` and require at least 90% line coverage (PCOV or Xdebug required)
 - `make package VERSION=x.y.z`: Build a distributable ZIP
 
 Run `make help` to see all targets.
@@ -62,7 +65,19 @@ See the official docs for [Installing a module](http://omeka.org/s/docs/user-man
    - Set the desired quota in megabytes (MB)
 3. Use `0` for unlimited.
 
-Uploads that exceed the configured quota are blocked.
+Uploads that exceed the configured quota are blocked. Site usage counts original media only for items assigned to the site. Attaching an item set does not add its items to the site's usage. Uploads to an item assigned to multiple sites must fit every site's quota.
+
+## Coverage
+
+CI installs dependencies from `composer.lock`, runs PHPUnit with PCOV, and fails below 90% line coverage across `Module.php` and `src/`. The SQLite regression tests require `pdo_sqlite` and exercise the actual site membership queries. Codecov receives the Clover report using GitHub OIDC authentication, with no upload token required. Both project and patch coverage targets are 90%.
+
+To run the same coverage check locally after `composer install`:
+
+```sh
+make test-coverage
+# With Xdebug instead of PCOV:
+XDEBUG_MODE=coverage make test-coverage
+```
 
 ## Requirements
 
