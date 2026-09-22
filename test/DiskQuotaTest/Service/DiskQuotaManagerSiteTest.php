@@ -9,42 +9,19 @@ use PHPUnit\Framework\TestCase;
 
 class DiskQuotaManagerSiteTest extends TestCase
 {
-    public function testGetUsedDiskSpaceBySiteAggregatesBothQueries(): void
+    use \DiskQuotaTest\SiteFixture;
+
+    public function testSiteUsageCountsAssignedItemsOnceRegardlessOfAttachedSets(): void
     {
-        // First statement returns size from direct items (30 MB)
-        $stmt1 = $this->getMockBuilder(\stdClass::class)
-            ->addMethods(['execute', 'fetchColumn', 'bindValue'])
-            ->getMock();
-        $stmt1->method('execute')->willReturn(true);
-        $stmt1->method('fetchColumn')->willReturn(30 * 1024 * 1024);
-        $stmt1->method('bindValue')->willReturnSelf();
+        $services = new ServiceManager();
+        $services->setService('Omeka\\Connection', $this->createSiteDatabase());
+        $manager = new DiskQuotaManager($services);
 
-        // Second statement returns size from item sets (70 MB)
-        $stmt2 = $this->getMockBuilder(\stdClass::class)
-            ->addMethods(['execute', 'fetchColumn', 'bindValue'])
-            ->getMock();
-        $stmt2->method('execute')->willReturn(true);
-        $stmt2->method('fetchColumn')->willReturn(70 * 1024 * 1024);
-        $stmt2->method('bindValue')->willReturnSelf();
-
-        // Connection returns stmt1, then stmt2 on subsequent prepare calls
-        $connection = $this->getMockBuilder(\stdClass::class)
-            ->addMethods(['prepare'])
-            ->getMock();
-        $connection->expects($this->exactly(2))
-            ->method('prepare')
-            ->willReturnOnConsecutiveCalls($stmt1, $stmt2);
-
-        // Minimal settings mocks (not used by this method)
-        $services = $this->createMock(ServiceManager::class);
-        $services->method('get')
-            ->will($this->returnValueMap([
-                ['Omeka\\Connection', $connection],
-            ]));
-
-        $mgr = new DiskQuotaManager($services);
-        $total = $mgr->getUsedDiskSpaceBySite(123);
-        $this->assertSame(100 * 1024 * 1024, $total, 'Should sum both site usage queries');
+        $this->assertSame(500, $manager->getUsedDiskSpaceBySite(10));
+        $this->assertSame(700, $manager->getUsedDiskSpaceBySite(20));
+        $this->assertSame(500, $manager->getUsedDiskSpaceBySite(30));
+        $this->assertSame(0, $manager->getUsedDiskSpaceBySite(40));
+        $this->assertSame(0, $manager->getUsedDiskSpaceBySite(99));
     }
 
     public function testGetSiteQuotaUsesSiteSettingOrDefaultAndConvertsToBytes(): void
@@ -108,6 +85,7 @@ class DiskQuotaManagerSiteTest extends TestCase
 
         // 5 MB additional should NOT exceed, 20 MB should exceed
         $this->assertFalse($mgr->isSiteQuotaExceeded(7, 5 * 1024 * 1024));
+        $this->assertFalse($mgr->isSiteQuotaExceeded(7, 10 * 1024 * 1024));
         $this->assertTrue($mgr->isSiteQuotaExceeded(7, 20 * 1024 * 1024));
 
         // Unlimited quota (0) should never exceed

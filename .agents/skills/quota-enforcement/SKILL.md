@@ -9,8 +9,9 @@ Trace `Module.php` upload hooks through `src/Service/DiskQuotaManager.php` and t
 
 - Settings are expressed in MB; usage is bytes. Preserve the `1024 * 1024` conversion and the
   nonpositive/unlimited convention. An upload reaches the limit legally; exceeding it is rejected.
-- User usage follows media ownership; site usage follows site item and item-set relationships.
-  Check duplicate joins, unassigned resources, and user/site limits together before changing a query.
+- User usage follows media ownership; site usage follows only explicit `item_site` membership.
+  Attached item sets do not assign their items to a site. Check each assigned site on upload,
+  duplicate joins, unassigned resources, and user/site limits together before changing a query.
 - Set the target ID before reading or writing user/site settings; shared services must not retain
   another user's or site's target accidentally.
 - Keep enforcement server-side for the ingestion paths the module supports. A form warning alone

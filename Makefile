@@ -141,10 +141,16 @@ compile-mo:
 i18n: generate-pot update-po check-untranslated compile-mo
 
 # Run unit tests
-.PHONY: test
+.PHONY: test test-coverage
 test: deps-update
 	@echo "Running unit tests..."
 	"vendor/bin/phpunit" -c test/phpunit.xml
+
+# Include Module.php as well as src/ when PCOV collects coverage.
+test-coverage:
+	@rm -f coverage.xml
+	php -d pcov.directory=. -d pcov.exclude='~/(vendor|test)/~' vendor/bin/phpunit -c test/phpunit.xml --coverage-clover coverage.xml --coverage-text
+	php test/check-coverage.php coverage.xml 90
 
 # Display help with available commands
 help:
@@ -169,6 +175,7 @@ help:
 	@echo ""
 	@echo "Testing:"
 	@echo "  test              - Run unit tests with PHPUnit"
+	@echo "  test-coverage     - Generate Clover coverage and require at least 90%"
 	@echo ""
 	@echo "Packaging:"
 	@echo "  package           - Generate a .zip package of the module with version tag"

@@ -57,35 +57,16 @@ class DiskQuotaManager
         $connection = $this->services->get('Omeka\Connection');
         
         try {
-            // Query to get all media files associated with a site through item_site table
-            $sql = "
+            // Only item_site assigns items to a site; attached item sets do not.
+            $stmt = $connection->prepare('
                 SELECT COALESCE(SUM(m.size), 0) AS total_size
                 FROM media m
-                JOIN item i ON m.item_id = i.id
-                JOIN item_site si ON si.item_id = i.id
+                JOIN item_site si ON si.item_id = m.item_id
                 WHERE si.site_id = ? AND m.has_original = 1
-            ";
-            $stmt = $connection->prepare($sql);
+            ');
             $stmt->bindValue(1, $siteId);
             $stmt->execute();
-            $sizeFromDirectItems = (int) $stmt->fetchColumn() ?: 0;
-            
-            // Also get media files associated with a site through item sets
-            $sql = "
-                SELECT COALESCE(SUM(m.size), 0) AS total_size
-                FROM media m
-                JOIN item i ON m.item_id = i.id
-                JOIN item_item_set iis ON iis.item_id = i.id
-                JOIN site_item_set sis ON sis.item_set_id = iis.item_set_id
-                WHERE sis.site_id = ? AND m.has_original = 1
-            ";
-            $stmt = $connection->prepare($sql);
-            $stmt->bindValue(1, $siteId);
-            $stmt->execute();
-            $sizeFromItemSets = (int) $stmt->fetchColumn() ?: 0;
-            
-            // Return the total size
-            return $sizeFromDirectItems + $sizeFromItemSets;
+            return (int) $stmt->fetchColumn();
         } catch (\Exception $e) {
             // Log the error
             error_log('DiskQuota: Error calculating site disk usage: ' . $e->getMessage());

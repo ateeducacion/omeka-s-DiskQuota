@@ -22,3 +22,7 @@ require_once __DIR__ . '/stubs/Omeka/Entity/User.php';
 // Load Laminas DB stubs
 require_once __DIR__ . '/stubs/Laminas/Db/Adapter/Driver/ConnectionInterface.php';
 require_once __DIR__ . '/stubs/Laminas/Db/Adapter/Driver/StatementInterface.php';
+
+// Keep the real Laminas form behavior for quota fieldset tests.
+require_once __DIR__ . '/stubs/Omeka/Form/SiteForm.php';
+require_once __DIR__ . '/stubs/Omeka/Form/UserForm.php';

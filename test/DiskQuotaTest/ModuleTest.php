@@ -70,9 +70,13 @@ class ModuleTest extends TestCase
         $this->module->attachListeners($sharedEventManagerMock);
     }
     
-    public function testCheckUserQuotaBeforeUpload(): void
+    public function testFactoryCreatesQuotaManager(): void
     {
-        // This test is more complex and may require more mocks
-        $this->assertTrue(true); // Placeholder for now
+        $config = $this->module->getServiceConfig();
+        $factory = $config['factories']['DiskQuota\\DiskQuotaManager'];
+        $this->assertInstanceOf(
+            \DiskQuota\Service\DiskQuotaManager::class,
+            $factory($this->serviceLocatorMock)
+        );
     }
 }
