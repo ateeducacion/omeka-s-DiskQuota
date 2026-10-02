@@ -1,5 +1,5 @@
 {
-  "$schema": "https://ateeducacion.github.io/omeka-s-playground/assets/blueprints/blueprint-schema.json",
+  "$schema": "https://omeka-s-contrib.github.io/omeka-s-blueprints/schema/v0/blueprint-schema.json",
   "meta": {
     "title": "DiskQuota Playground Blueprint",
     "author": "ateeducacion",
@@ -9,18 +9,15 @@
     "php": "8.3",
     "omeka": "4.2.0"
   },
-  "debug": {
-    "enabled": true
-  },
-  "landingPage": "/admin",
-  "siteOptions": {
+  "install": {
     "title": "DiskQuota Playground",
     "locale": "es",
-    "timezone": "Atlantic/Canary"
-  },
-  "login": {
-    "email": "admin@example.com",
-    "password": "password"
+    "timezone": "Atlantic/Canary",
+    "admin": {
+      "name": "admin",
+      "email": "admin@example.com",
+      "password": "password"
+    }
   },
   "users": [
     {
@@ -49,10 +46,7 @@
     {
       "name": "DiskQuota",
       "state": "activate",
-      "source": {
-        "type": "url",
-        "url": "https://github.com/ateeducacion/omeka-s-DiskQuota/archive/refs/heads/main.zip"
-      }
+      "source": "https://github.com/ateeducacion/omeka-s-DiskQuota/archive/refs/heads/main.zip"
     }
   ],
   "itemSets": [
@@ -102,12 +96,20 @@
       ]
     }
   ],
-  "site": {
-    "title": "DiskQuota Demo",
-    "slug": "demo",
-    "theme": "default",
-    "summary": "Instalación de pruebas para DiskQuota con usuarios adicionales y recursos de ejemplo ya asociados al sitio.",
-    "isPublic": true,
-    "setAsDefault": true
+  "sites": [
+    {
+      "title": "DiskQuota Demo",
+      "slug": "demo",
+      "theme": "default",
+      "summary": "Instalación de pruebas para DiskQuota con usuarios adicionales y recursos de ejemplo ya asociados al sitio.",
+      "isPublic": true,
+      "setAsDefault": true
+    }
+  ],
+  "x-playground": {
+    "debug": {
+      "enabled": true
+    },
+    "landingPage": "/admin"
   }
 }
