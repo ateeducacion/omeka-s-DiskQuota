@@ -24,7 +24,7 @@ DiskQuota lets administrators set and enforce per-user and per-site storage limi
 - Start stack: `make up` then open `http://localhost:8080`
 - Stop stack: `make down`
 
-This dev stack uses `erseco/alpine-omeka-s:develop` (service `omeka`) and `mariadb`. Your module is mounted at `/var/www/html/volume/modules/DiskQuota`.
+This dev stack uses `erseco/alpine-omeka-s:4.2` (service `omeka`), configured from `blueprint.json` (the same file as the Omeka S Playground), and `mariadb`. Your module is mounted at `/var/www/html/volume/modules/DiskQuota`.
 
 ### Sample Data (optional)
 
@@ -32,7 +32,7 @@ This dev stack uses `erseco/alpine-omeka-s:develop` (service `omeka`) and `maria
 - Import manually any time: `make import-sample`
 
 Default admin user (created on first boot):
-- `admin@example.com` password: `PLEASE_CHANGEME`
+- `admin@example.com` password: `password`
 
 ### Useful Make Targets
 
