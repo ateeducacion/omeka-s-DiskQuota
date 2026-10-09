@@ -25,7 +25,7 @@ Inside the isolated container, with this repository mounted at `/module`:
 
 ```sh
 cd /var/www/html
-php -r 'file_put_contents("/tmp/full.txt", str_repeat("x", 1048576)); file_put_contents("/tmp/new.txt", str_repeat("x", 1024));'
+php -r 'file_put_contents("/tmp/full.txt", str_repeat("x\n", 524288)); file_put_contents("/tmp/new.txt", str_repeat("x\n", 512));'
 DISKQUOTA_TEST_ROOT=/var/www/html php -S 127.0.0.1:8765 /module/test/integration/contradictory-item.php
 ```
 
