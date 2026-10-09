@@ -46,10 +46,10 @@ class UploadQuotaListener
         }
         $data = $request->getContent();
         $size = $this->getFileSize($data);
-        if ($size <= 0 || empty($data['o:item']['o:id'])) {
+        if ($size <= 0) {
             return;
         }
-        $siteIds = $this->getSiteIds($data['o:item']['o:id']);
+        $siteIds = $this->getSiteIds($data, $event->getParam('entity'));
         if (!$siteIds) {
             return;
         }
@@ -66,9 +66,21 @@ class UploadQuotaListener
         return (new UploadSizeResolver())->getSize($this->services->get('Request'), $data);
     }
 
-    private function getSiteIds($itemId): array
+    private function getSiteIds(array $data, $entity): array
     {
         $siteIds = [];
+        $itemId = $data['o:item']['o:id'] ?? null;
+        // MediaAdapter honors an explicit o:item, even when ItemAdapter set a parent.
+        $item = $entity && method_exists($entity, 'getItem') ? $entity->getItem() : null;
+        if ($item && ($itemId === null || $itemId == $item->getId())) {
+            foreach ($item->getSites() as $site) {
+                $siteIds[] = (int) $site->getId();
+            }
+            return $siteIds;
+        }
+        if (!$itemId) {
+            return $siteIds;
+        }
         try {
             $connection = $this->services->get('Omeka\Connection');
             $stmt = $connection->prepare('SELECT site_id FROM item_site WHERE item_id = ?');

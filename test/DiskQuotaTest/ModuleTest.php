@@ -72,7 +72,7 @@ class ModuleTest extends TestCase
             ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
             ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
             ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.create.pre', $uploads, 'checkUserQuotaBeforeUpload'],
-            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.create.pre', $uploads, 'checkSiteQuotaBeforeUpload'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.pre', $uploads, 'checkSiteQuotaBeforeUpload'],
             ['Omeka\\Form\\UserForm', 'form.add_elements', $users, 'addUserQuotaFieldset'],
             ['Omeka\\Controller\\Admin\\User', 'view.details', $users, 'viewUserQuotaDetails'],
             ['Omeka\\Api\\Adapter\\UserAdapter', 'api.update.post', $users, 'handleUserQuotaForm'],

@@ -19,6 +19,46 @@ permissions:
   contents: read
 
 jobs:
+  sqlite_integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          path: module
+
+      # Upstream Omeka does not yet support SQLite; use the audited fork revision.
+      - uses: actions/checkout@v7
+        with:
+          repository: ateeducacion/omeka-s
+          ref: 74a5e131f1881e9d565cf346ff090155b7ee833b
+          persist-credentials: false
+          path: omeka
+
+      - name: PHP setup
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          extensions: mbstring, intl, curl, dom, fileinfo, pdo_sqlite, xml, zip
+          tools: composer
+
+      - name: Install Omeka thumbnailer
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends imagemagick
+
+      - name: Install Omeka dependencies
+        working-directory: omeka
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      - name: Install pinned Omeka CLI
+        run: |
+          curl --fail --location --silent --show-error https://github.com/GhentCDH/Omeka-S-Cli/releases/download/v0.18.0/omeka-s-cli.phar -o omeka-s-cli.phar
+          echo '439b99e0e4122fd927a2143ce810e0e68b393f73a660188118b7392574302b34  omeka-s-cli.phar' | sha256sum --check
+
+      - name: Run real SQLite upload regression
+        run: bash module/test/integration/run-sqlite.sh omeka omeka-s-cli.phar
+
   lint_and_test:
     runs-on: ubuntu-latest
     permissions:
