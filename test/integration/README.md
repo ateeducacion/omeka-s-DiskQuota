@@ -18,6 +18,9 @@ with `composer install --no-dev`, download the verified CLI PHAR, then run:
 bash test/integration/run-sqlite.sh /path/to/disposable/omeka /path/to/omeka-s-cli.phar
 ```
 
+PHP needs Omeka's required extensions, including `pdo_sqlite` and `fileinfo`;
+ImageMagick's `convert` command must also be available, as in the CI job.
+
 The runner prints the four checks and fails on an HTTP error or missing
 `AUDIT_RESULT=PASS`. The PHP server and temporary database/uploads are removed
 on exit. Installed Omeka data remains in the disposable checkout.

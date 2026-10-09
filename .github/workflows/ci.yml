@@ -44,6 +44,9 @@ jobs:
           extensions: mbstring, intl, curl, dom, fileinfo, pdo_sqlite, xml, zip
           tools: composer
 
+      - name: Install Omeka thumbnailer
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends imagemagick
+
       - name: Install Omeka dependencies
         working-directory: omeka
         run: composer install --no-dev --no-interaction --prefer-dist
