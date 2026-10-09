@@ -20,7 +20,6 @@ mkdir -p files modules
 ln -s "$(dirname "$(dirname "$tests")")" modules/DiskQuota
 php "$cli" core:install --admin-email admin@example.com --admin-password audit-test-password --title 'DiskQuota integration'
 php "$cli" module:install DiskQuota
-# Short text lines avoid libmagic treating a 1 MiB line as application/octet-stream.
 php -r 'file_put_contents($argv[1], str_repeat("x\n", 524288)); file_put_contents($argv[2], str_repeat("x\n", 512));' "$scratch/full.txt" "$scratch/new.txt"
 DISKQUOTA_TEST_ROOT="$core" php -S 127.0.0.1:8765 "$tests/contradictory-item.php" > "$scratch/http.log" 2>&1 &
 server=$!

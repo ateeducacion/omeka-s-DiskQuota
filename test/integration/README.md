@@ -7,6 +7,9 @@ of `.github/workflows/ci.yml`. The job checks out the SQLite-capable Omeka fork
 at `74a5e131f1881e9d565cf346ff090155b7ee833b`, installs its Composer dependencies
 and uses Omeka CLI 0.18.0, verified against its published SHA256, to install Omeka
 and activate this module. No production data or GitHub secrets are used.
+The disposable instance accepts `text/plain` and `application/octet-stream`
+for the generated `.txt` fixture, whose detected MIME type varies by libmagic
+version; Omeka's file validation remains enabled.
 
 To run the same job locally, prepare a clean checkout of that core revision
 with `composer install --no-dev`, download the verified CLI PHAR, then run:

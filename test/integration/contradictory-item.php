@@ -18,6 +18,8 @@ try {
         throw new RuntimeException('Install Omeka with admin@example.com and activate DiskQuota first');
     }
     $services->get('Omeka\AuthenticationService')->getStorage()->write($admin);
+    // libmagic versions classify the generated text fixture differently.
+    $services->get('Omeka\Settings')->set('media_type_whitelist', ['text/plain', 'application/octet-stream']);
     $users = $services->get('Omeka\Settings\User');
     $users->setTargetId($admin->getId());
     $users->set('diskquota_user_quota', 0);
