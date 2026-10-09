@@ -80,4 +80,7 @@ try {
 } catch (Throwable $e) {
     http_response_code(500);
     echo get_class($e) . ': ' . $e->getMessage() . "\nAUDIT_RESULT=FAIL\n";
+    if ($e instanceof Omeka\Api\Exception\ValidationException) {
+        echo json_encode($e->getErrorStore()->getErrors(), JSON_PRETTY_PRINT) . "\n";
+    }
 }
