@@ -2,6 +2,25 @@ Run this regression only in a disposable Omeka installation with DiskQuota activ
 and an administrator `admin@example.com`. It creates sites, items and uploaded
 media and requires the real core API, database and HTTP upload handling.
 
+CI runs it automatically on PHP 8.1 and SQLite in the `sqlite_integration` job
+of `.github/workflows/ci.yml`. The job checks out the SQLite-capable Omeka fork
+at `74a5e131f1881e9d565cf346ff090155b7ee833b`, installs its Composer dependencies
+and uses Omeka CLI 0.18.0, verified against its published SHA256, to install Omeka
+and activate this module. No production data or GitHub secrets are used.
+
+To run the same job locally, prepare a clean checkout of that core revision
+with `composer install --no-dev`, download the verified CLI PHAR, then run:
+
+```sh
+bash test/integration/run-sqlite.sh /path/to/disposable/omeka /path/to/omeka-s-cli.phar
+```
+
+The runner prints the four checks and fails on an HTTP error or missing
+`AUDIT_RESULT=PASS`. The PHP server and temporary database/uploads are removed
+on exit. Installed Omeka data remains in the disposable checkout.
+
+For manual testing against an already installed disposable instance:
+
 Inside the isolated container, with this repository mounted at `/module`:
 
 ```sh
