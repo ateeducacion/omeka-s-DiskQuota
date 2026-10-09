@@ -69,15 +69,15 @@ class UploadQuotaListener
     private function getSiteIds(array $data, $entity): array
     {
         $siteIds = [];
-        // ItemAdapter sets the parent and its sites before hydrating nested media.
+        $itemId = $data['o:item']['o:id'] ?? null;
+        // MediaAdapter honors an explicit o:item, even when ItemAdapter set a parent.
         $item = $entity && method_exists($entity, 'getItem') ? $entity->getItem() : null;
-        if ($item) {
+        if ($item && ($itemId === null || $itemId == $item->getId())) {
             foreach ($item->getSites() as $site) {
                 $siteIds[] = (int) $site->getId();
             }
             return $siteIds;
         }
-        $itemId = $data['o:item']['o:id'] ?? null;
         if (!$itemId) {
             return $siteIds;
         }

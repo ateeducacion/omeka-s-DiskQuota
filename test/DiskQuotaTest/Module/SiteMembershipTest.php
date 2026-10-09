@@ -46,51 +46,47 @@ class SiteMembershipTest extends TestCase
         $events->triggerEvent($event);
     }
 
-    public function testNestedUploadChecksTheHydratedParentSites(): void
+    /** @dataProvider nestedUploadCases */
+    public function testNestedUploadChecksTheFinalItemSites(?int $parentId, ?int $requestedId, int $expectedSite): void
     {
-        $site = new class {
-            public function getId()
-            {
-                return 20;
-            }
-        };
-        $item = new class($site) {
-            private $site;
-            public function __construct($site)
-            {
-                $this->site = $site;
-            }
-            public function getSites()
-            {
-                return [$this->site];
-            }
-        };
-        $media = new class($item) {
-            private $item;
-            public function __construct($item)
-            {
-                $this->item = $item;
-            }
-            public function getItem()
-            {
-                return $this->item;
-            }
-        };
+        $site = $this->getMockBuilder(\stdClass::class)->addMethods(['getId'])->getMock();
+        $site->method('getId')->willReturn(20);
+        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getId', 'getSites'])->getMock();
+        $item->method('getId')->willReturn($parentId);
+        $item->method('getSites')->willReturn([$site]);
+        $media = $this->getMockBuilder(\stdClass::class)->addMethods(['getItem'])->getMock();
+        $media->method('getItem')->willReturn($item);
         $manager = $this->createMock(DiskQuotaManager::class);
-        $manager->expects($this->once())->method('isSiteQuotaExceeded')->with(20, 100)->willReturn(true);
+        $manager->expects($this->once())->method('isSiteQuotaExceeded')->with($expectedSite, 100)->willReturn(true);
         $manager->method('getSiteQuota')->willReturn(1000);
         $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
         $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
         $errors->expects($this->once())->method('addError');
         $services = new ServiceManager();
         $services->setService('DiskQuota\\DiskQuotaManager', $manager);
+        $services->setService('Omeka\\Connection', $this->createSiteDatabase());
         $services->setService('Request', new Request());
         $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
         $request->method('getOperation')->willReturn('create');
-        $request->method('getContent')->willReturn(['o:size' => 100]);
+        $data = ['o:size' => 100];
+        if ($requestedId !== null) {
+            $data['o:item'] = ['o:id' => $requestedId];
+        }
+        $request->method('getContent')->willReturn($data);
         (new UploadQuotaListener($services))->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, [
             'request' => $request, 'entity' => $media, 'errorStore' => $errors,
         ]));
+    }
+
+    public function nestedUploadCases(): array
+    {
+        return [
+            'new parent without override' => [null, null, 20],
+            'existing parent without override' => [1, null, 20],
+            'same parent uses pending site assignments' => [1, 1, 20],
+            'existing parent replaced by request' => [1, 4, 30],
+            'new parent replaced by request' => [null, 4, 30],
+        ];
     }
 
     /** @dataProvider uploadCases */
