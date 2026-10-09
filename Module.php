@@ -154,10 +154,10 @@ class Module extends AbstractModule
             [$sites, 'handleSiteQuotaForm']
         );
         
-        // Check site quota before upload
+        // Hydration provides the error store and also runs for nested media.
         $sharedEventManager->attach(
             'Omeka\Api\Adapter\MediaAdapter',
-            'api.create.pre',
+            'api.hydrate.pre',
             [$uploads, 'checkSiteQuotaBeforeUpload']
         );
     }

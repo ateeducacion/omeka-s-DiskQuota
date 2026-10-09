@@ -7,6 +7,8 @@ use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Service\DiskQuotaManager;
 use DiskQuotaTest\SiteFixture;
 use Laminas\EventManager\Event;
+use Laminas\EventManager\EventManager;
+use Laminas\EventManager\SharedEventManager;
 use Laminas\Http\Request;
 use Laminas\ServiceManager\ServiceManager;
 use Laminas\Stdlib\Parameters;
@@ -15,6 +17,81 @@ use PHPUnit\Framework\TestCase;
 class SiteMembershipTest extends TestCase
 {
     use SiteFixture;
+
+    public function testRegisteredHydrationListenerRejectsDirectUploads(): void
+    {
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
+        $services->setService('Omeka\\Connection', $this->createSiteDatabase());
+        $services->setService('Request', new Request());
+        $services->setService('Omeka\\AuthenticationService', new class {
+            public function getIdentity()
+            {
+                return null;
+            }
+        });
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->expects($this->once())->method('isSiteQuotaExceeded')->with(30, 100)->willReturn(true);
+        $manager->method('getSiteQuota')->willReturn(1000);
+        $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
+        $services->setService('DiskQuota\\DiskQuotaManager', $manager);
+        $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
+        $errors->expects($this->once())->method('addError')->with('file', $this->anything());
+        $module = new \DiskQuota\Module();
+        $module->setServiceLocator($services);
+        $shared = new SharedEventManager();
+        $module->attachListeners($shared);
+        $events = new EventManager($shared, ['Omeka\\Api\\Adapter\\MediaAdapter']);
+        $event = $this->uploadEvent(4, $errors);
+        $event->setName('api.hydrate.pre');
+        $events->triggerEvent($event);
+    }
+
+    public function testNestedUploadChecksTheHydratedParentSites(): void
+    {
+        $site = new class {
+            public function getId()
+            {
+                return 20;
+            }
+        };
+        $item = new class($site) {
+            private $site;
+            public function __construct($site)
+            {
+                $this->site = $site;
+            }
+            public function getSites()
+            {
+                return [$this->site];
+            }
+        };
+        $media = new class($item) {
+            private $item;
+            public function __construct($item)
+            {
+                $this->item = $item;
+            }
+            public function getItem()
+            {
+                return $this->item;
+            }
+        };
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->expects($this->once())->method('isSiteQuotaExceeded')->with(20, 100)->willReturn(true);
+        $manager->method('getSiteQuota')->willReturn(1000);
+        $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
+        $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
+        $errors->expects($this->once())->method('addError');
+        $services = new ServiceManager();
+        $services->setService('DiskQuota\\DiskQuotaManager', $manager);
+        $services->setService('Request', new Request());
+        $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
+        $request->method('getOperation')->willReturn('create');
+        $request->method('getContent')->willReturn(['o:size' => 100]);
+        (new UploadQuotaListener($services))->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, [
+            'request' => $request, 'entity' => $media, 'errorStore' => $errors,
+        ]));
+    }
 
     /** @dataProvider uploadCases */
     public function testUploadChecksOnlyAllAssignedSites(int $itemId, array $checked, ?int $fullSite): void
@@ -98,7 +175,7 @@ class SiteMembershipTest extends TestCase
         $services->setService('Request', new Request());
         $services->setService('DiskQuota\\DiskQuotaManager', $manager);
         $module = new UploadQuotaListener($services);
-        $module->checkSiteQuotaBeforeUpload(new Event('api.create.pre', null, ['request' => $request]));
+        $module->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, ['request' => $request]));
     }
 
     public function ignoredUploadCases(): array
@@ -130,7 +207,7 @@ class SiteMembershipTest extends TestCase
         $request->method('getOperation')->willReturn('create');
         $request->method('getContent')->willReturn(['o:item' => ['o:id' => 1], 'o:size' => $bytes]);
         $module = new UploadQuotaListener($services);
-        $module->checkSiteQuotaBeforeUpload(new Event('api.create.pre', null, [
+        $module->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, [
             'request' => $request, 'errorStore' => $errors,
         ]));
         $this->assertSame(7, (int) $db->query('SELECT COUNT(*) FROM media')->fetchColumn());
@@ -151,6 +228,6 @@ class SiteMembershipTest extends TestCase
         $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
         $request->method('getOperation')->willReturn('create');
         $request->method('getContent')->willReturn(['o:item' => ['o:id' => $itemId], 'data' => ['size' => 100]]);
-        return new Event('api.create.pre', null, ['request' => $request, 'errorStore' => $errors]);
+        return new Event('api.hydrate.pre', null, ['request' => $request, 'errorStore' => $errors]);
     }
 }
