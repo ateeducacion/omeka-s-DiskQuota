@@ -30,30 +30,11 @@ class SiteAssignmentListener
     {
         $errors = $event->getParam('errorStore');
         $item = $event->getParam('entity');
-        $sites = $item->getSites();
-        if ($errors->hasErrors() || $item->getId() === null
-            || (method_exists($sites, 'isDirty') && !$sites->isDirty())) {
+        if ($errors->hasErrors() || !$this->sitesMayHaveChanged($item)) {
             return;
         }
-        $stmt = $this->services->get('Omeka\Connection')->prepare('SELECT site_id FROM item_site WHERE item_id = ?');
-        $stmt->bindValue(1, $item->getId());
-        $stmt->execute();
-        $persisted = [];
-        while (($siteId = $stmt->fetchColumn()) !== false) {
-            $persisted[] = (int) $siteId;
-        }
-        $added = [];
-        foreach ($sites as $site) {
-            if (!in_array((int) $site->getId(), $persisted, true)) {
-                $added[] = (int) $site->getId();
-            }
-        }
-        $bytes = 0;
-        foreach ($item->getMedia() as $media) {
-            if ($media->hasOriginal()) {
-                $bytes += (int) $media->getSize();
-            }
-        }
+        $added = array_diff($this->getSiteIds($item), $this->getPersistedSiteIds((int) $item->getId()));
+        $bytes = $this->getOriginalBytes($item);
         if (!$added || $bytes <= 0) {
             return;
         }
@@ -66,5 +47,44 @@ class SiteAssignmentListener
                 ));
             }
         }
+    }
+
+    /** New items are left to the ingest check; a clean collection was not hydrated. */
+    private function sitesMayHaveChanged($item): bool
+    {
+        $sites = $item->getSites();
+        return $item->getId() !== null && !(method_exists($sites, 'isDirty') && !$sites->isDirty());
+    }
+
+    private function getSiteIds($item): array
+    {
+        $siteIds = [];
+        foreach ($item->getSites() as $site) {
+            $siteIds[] = (int) $site->getId();
+        }
+        return $siteIds;
+    }
+
+    private function getPersistedSiteIds(int $itemId): array
+    {
+        $stmt = $this->services->get('Omeka\Connection')->prepare('SELECT site_id FROM item_site WHERE item_id = ?');
+        $stmt->bindValue(1, $itemId);
+        $stmt->execute();
+        $siteIds = [];
+        while (($siteId = $stmt->fetchColumn()) !== false) {
+            $siteIds[] = (int) $siteId;
+        }
+        return $siteIds;
+    }
+
+    private function getOriginalBytes($item): int
+    {
+        $bytes = 0;
+        foreach ($item->getMedia() as $media) {
+            if ($media->hasOriginal()) {
+                $bytes += (int) $media->getSize();
+            }
+        }
+        return $bytes;
     }
 }
