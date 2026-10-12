@@ -107,3 +107,8 @@ msgstr "Umbral de aviso (%)"
 #, php-format
 msgid " E.g., 15 = warn at 85% usage."
 msgstr " Ej.: 15 = avisar al alcanzar el 85% del uso."
+
+#: src/Listener/SiteAssignmentListener.php
+#, php-format
+msgid "Site assignment rejected: quota exceeded for site %s."
+msgstr "Asignación de sitio rechazada: se ha superado la cuota del sitio %s."

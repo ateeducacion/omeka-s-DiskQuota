@@ -66,6 +66,8 @@ try {
     $reject(['o:site' => [['o:id' => $free->id()]], 'o:media' => [$upload]], 'new parent with contradictory o:item');
     $upload['file_index'] = 2;
     $reject(['o:media' => [$upload]], 'existing parent with contradictory o:item', $parent->id());
+    // Each rejected upload consumes its temp file during ingestion.
+    $upload['file_index'] = 3;
     $upload['o:item']['o:id'] = $parent->id();
     $reject(
         ['o:site' => [['o:id' => $full->id()]], 'o:media' => [$upload]],

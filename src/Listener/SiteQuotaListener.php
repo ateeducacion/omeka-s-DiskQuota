@@ -34,7 +34,7 @@ class SiteQuotaListener
             $form->add(['name' => 'site_settings', 'type' => 'fieldset']);
         }
         $this->addQuotaField($form->get('site_settings'), $data['siteQuota'], $isAdmin);
-        if ($site && $data['siteQuota'] > 0) {
+        if ($site && $data['siteQuota'] > 0 && $data['currentUsage'] !== null) {
             $html = $this->services->get('ViewRenderer')->partial('common/site-quota-usage', $data);
             $targetId = $isAdmin ? 'diskquota_site_quota' : 'diskquota_site_quota_display';
             QuotaFieldset::appendUsage($html, $targetId);
@@ -48,7 +48,10 @@ class SiteQuotaListener
         if (!$site) {
             return;
         }
-        echo $view->partial('common/site-quota-usage', $this->getUsage($site, $site->id()));
+        $data = $this->getUsage($site, $site->id());
+        if ($data['currentUsage'] !== null) {
+            echo $view->partial('common/site-quota-usage', $data);
+        }
     }
 
     private function getCurrentSiteId()
@@ -74,7 +77,12 @@ class SiteQuotaListener
             $data['siteQuota'] = $settings->get('diskquota_site_quota', $defaultQuota);
             error_log('DiskQuota: Retrieved site quota for site ID ' . $siteId . ': ' . $data['siteQuota']);
             $manager = $this->services->get('DiskQuota\DiskQuotaManager');
-            $data['currentUsage'] = $manager->getUsedDiskSpaceBySite($siteId);
+            try {
+                $data['currentUsage'] = $manager->getUsedDiskSpaceBySite($siteId);
+            } catch (\Exception $e) {
+                // The manager logs it; hide the usage block instead of showing a false 0.
+                $data['currentUsage'] = null;
+            }
             $data['mediaCount'] = $this->getMediaCount($siteId);
         }
         return $data;

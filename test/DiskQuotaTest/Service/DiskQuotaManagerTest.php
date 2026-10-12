@@ -8,6 +8,33 @@ use PHPUnit\Framework\TestCase;
 
 class DiskQuotaManagerTest extends TestCase
 {
+    /** @dataProvider usageScopes */
+    public function testUsageQueryFailureCannotApproveAnUpload(string $scope): void
+    {
+        $connection = $this->getMockBuilder(\stdClass::class)->addMethods(['prepare'])->getMock();
+        $connection->method('prepare')->willThrowException(new \RuntimeException('Usage query unavailable'));
+        $settings = $this->getMockBuilder(\stdClass::class)->addMethods(['get', 'setTargetId'])->getMock();
+        $settings->method('get')->willReturn(1);
+        $services = new ServiceManager();
+        $services->setService('Omeka\Connection', $connection);
+        $services->setService('Omeka\Settings', new \Omeka\Settings());
+        $services->setService('Omeka\Settings\User', $settings);
+        $services->setService('Omeka\Settings\Site', $settings);
+        $manager = new DiskQuotaManager($services);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Usage query unavailable');
+        if ($scope === 'user') {
+            $manager->isQuotaExceeded(1, 1);
+        } else {
+            $manager->isSiteQuotaExceeded(1, 1);
+        }
+    }
+
+    public function usageScopes(): array
+    {
+        return [['user'], ['site']];
+    }
+
     protected $diskQuotaManager;
     protected $serviceLocatorMock;
     

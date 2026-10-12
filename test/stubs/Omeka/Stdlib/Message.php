@@ -3,8 +3,17 @@ namespace Omeka\Stdlib;
 
 class Message
 {
-    public function __construct($message, $args = [])
+    private $message;
+    private $args;
+
+    public function __construct($message, ...$args)
     {
-        // Constructor stub
+        $this->message = $message;
+        $this->args = $args;
+    }
+
+    public function __toString()
+    {
+        return vsprintf($this->message, $this->args);
     }
 }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace DiskQuota;
 
+use DiskQuota\Listener\SiteAssignmentListener;
 use DiskQuota\Listener\SiteQuotaListener;
 use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Listener\UserQuotaListener;
@@ -38,7 +39,12 @@ class Module extends AbstractModule
                 return new Service\DiskQuotaManager($services);
             },
         ];
-        foreach ([UploadQuotaListener::class, UserQuotaListener::class, SiteQuotaListener::class] as $class) {
+        foreach ([
+            UploadQuotaListener::class,
+            UserQuotaListener::class,
+            SiteQuotaListener::class,
+            SiteAssignmentListener::class,
+        ] as $class) {
             $factories[$class] = function ($services) use ($class) {
                 return new $class($services);
             };
@@ -84,25 +90,18 @@ class Module extends AbstractModule
         $users = $services->get(UserQuotaListener::class);
         $sites = $services->get(SiteQuotaListener::class);
 
-        // Listen for media creation to check user quota
         $sharedEventManager->attach(
-            'Omeka\Api\Adapter\MediaAdapter',
-            'api.hydrate.pre',
-            [$uploads, 'checkUserQuotaBeforeUpload']
+            'Omeka\File\TempFile',
+            'media.ingest_file.pre',
+            [$uploads, 'checkIngestFileQuota']
         );
-        
-    // Also attach to all item adapter events since files are often uploaded as part of items
+        foreach (['Omeka\Api\Adapter\ItemAdapter', 'Omeka\Api\Adapter\MediaAdapter'] as $adapter) {
+            $sharedEventManager->attach($adapter, 'api.hydrate.post', [$uploads, 'cleanupFailedHydration'], -1000);
+        }
         $sharedEventManager->attach(
             'Omeka\Api\Adapter\ItemAdapter',
-            'api.hydrate.pre',
-            [$uploads, 'checkUserQuotaBeforeUpload']
-        );
-
-        // Also attach to the api.create.pre event for Media to catch direct API uploads
-        $sharedEventManager->attach(
-            'Omeka\Api\Adapter\MediaAdapter',
-            'api.create.pre',
-            [$uploads, 'checkUserQuotaBeforeUpload']
+            'api.hydrate.post',
+            [$services->get(SiteAssignmentListener::class), 'check']
         );
 
         // Add disk quota tab to user edit page
@@ -152,13 +151,6 @@ class Module extends AbstractModule
             'Omeka\Controller\SiteAdmin\Index',
             'site.save.post',
             [$sites, 'handleSiteQuotaForm']
-        );
-        
-        // Hydration provides the error store and also runs for nested media.
-        $sharedEventManager->attach(
-            'Omeka\Api\Adapter\MediaAdapter',
-            'api.hydrate.pre',
-            [$uploads, 'checkSiteQuotaBeforeUpload']
         );
     }
 

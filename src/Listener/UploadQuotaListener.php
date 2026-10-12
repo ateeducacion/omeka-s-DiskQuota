@@ -3,103 +3,88 @@ declare(strict_types=1);
 
 namespace DiskQuota\Listener;
 
-use DiskQuota\Service\UploadSizeResolver;
+use DiskQuota\Service\PendingUploads;
 use Laminas\ServiceManager\ServiceLocatorInterface;
+use Omeka\Api\Exception\ValidationException;
 use Omeka\Stdlib\Message;
 
 class UploadQuotaListener
 {
     private $services;
+    private $pending;
 
     public function __construct(ServiceLocatorInterface $services)
     {
         $this->services = $services;
+        $this->pending = new PendingUploads($services);
     }
 
-    public function checkUserQuotaBeforeUpload($event): void
+    public function checkIngestFileQuota($event): void
     {
-        $user = $this->services->get('Omeka\AuthenticationService')->getIdentity();
-        if (!$user) {
+        if ($event->getParam('request')->getOperation() !== 'create') {
             return;
         }
-        $request = $event->getParam('request');
-        if ($request->getOperation() !== 'create') {
+        if (!$event->getParam('storeOriginal')) {
+            $this->pending->track($event->getTarget(), 0);
             return;
         }
-        $size = $this->getFileSize($request->getContent());
-        $userId = $user->getId();
-        error_log('DiskQuota: Checking file upload with size: ' . $size . ' bytes for user ID: ' . $userId);
+        $size = (int) $event->getParam('tempFile')->getSize();
         if ($size <= 0) {
+            $this->pending->track($event->getTarget(), 0);
             return;
         }
+        $media = $event->getTarget();
+        $ownerId = $media->getOwner()?->getId();
+        [$userBytes, $siteBytes] = $this->pending->getUploadBytes(
+            $media,
+            $ownerId,
+            $size,
+            $this->getSiteIds($media)
+        );
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
-        if ($manager->isQuotaExceeded($userId, $size)) {
-            $this->rejectUserUpload($event, $userId, $size);
+        if ($ownerId !== null && $manager->isQuotaExceeded($ownerId, $userBytes)) {
+            $this->rejectUserUpload($event, $ownerId, $size, $userBytes - $size);
         }
-    }
-
-    public function checkSiteQuotaBeforeUpload($event): void
-    {
-        $request = $event->getParam('request');
-        if ($request->getOperation() !== 'create') {
-            return;
-        }
-        $data = $request->getContent();
-        $size = $this->getFileSize($data);
-        if ($size <= 0) {
-            return;
-        }
-        $siteIds = $this->getSiteIds($data, $event->getParam('entity'));
-        if (!$siteIds) {
-            return;
-        }
-        $manager = $this->services->get('DiskQuota\DiskQuotaManager');
-        foreach ($siteIds as $siteId) {
-            if ($manager->isSiteQuotaExceeded($siteId, $size)) {
-                $this->rejectSiteUpload($event, $siteId, $size);
+        foreach ($siteBytes as $siteId => $bytes) {
+            if ($manager->isSiteQuotaExceeded($siteId, $bytes)) {
+                $this->rejectSiteUpload($event, $siteId, $size, $bytes - $size);
             }
         }
+        $errors = $event->getParam('errorStore');
+        if ($errors->hasErrors()) {
+            // This event does not inspect errorStore before copying to permanent storage.
+            $exception = new ValidationException();
+            $exception->setErrorStore($errors);
+            throw $exception;
+        }
+        $this->pending->track($media, $size);
     }
 
-    private function getFileSize(array $data): int
+    public function cleanupFailedHydration($event): void
     {
-        return (new UploadSizeResolver())->getSize($this->services->get('Request'), $data);
+        $this->pending->cleanupFailedHydration($event);
     }
 
-    private function getSiteIds(array $data, $entity): array
+    public function cleanupUnpersistedFiles(): void
+    {
+        $this->pending->cleanupUnpersistedFiles();
+    }
+
+    private function getSiteIds($media): array
     {
         $siteIds = [];
-        $itemId = $data['o:item']['o:id'] ?? null;
-        // MediaAdapter honors an explicit o:item, even when ItemAdapter set a parent.
-        $item = $entity && method_exists($entity, 'getItem') ? $entity->getItem() : null;
-        if ($item && ($itemId === null || $itemId == $item->getId())) {
-            foreach ($item->getSites() as $site) {
-                $siteIds[] = (int) $site->getId();
-            }
-            return $siteIds;
-        }
-        if (!$itemId) {
-            return $siteIds;
-        }
-        try {
-            $connection = $this->services->get('Omeka\Connection');
-            $stmt = $connection->prepare('SELECT site_id FROM item_site WHERE item_id = ?');
-            $stmt->bindValue(1, $itemId);
-            $stmt->execute();
-            while (($siteId = $stmt->fetchColumn()) !== false) {
-                $siteIds[] = (int) $siteId;
-            }
-        } catch (\Exception $e) {
-            error_log('DiskQuota: Error determining site for item: ' . $e->getMessage());
+        // MediaAdapter sets the final item before ingesting, including pending site assignments.
+        foreach ($media->getItem()?->getSites() ?? [] as $site) {
+            $siteIds[] = (int) $site->getId();
         }
         return $siteIds;
     }
 
-    private function rejectUserUpload($event, $userId, int $size): void
+    private function rejectUserUpload($event, $userId, int $size, int $pendingBytes): void
     {
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
         $quotaMB = round($manager->getUserQuota($userId) / (1024 * 1024), 2);
-        $usedMB = round($manager->getUsedDiskSpaceByUser($userId) / (1024 * 1024), 2);
+        $usedMB = round(($manager->getUsedDiskSpaceByUser($userId) + $pendingBytes) / (1024 * 1024), 2);
         $sizeMB = round($size / (1024 * 1024), 2);
         error_log(sprintf(
             'DiskQuota: Upload rejected. File size: %s MB, Used: %s MB, Limit: %s MB',
@@ -118,11 +103,11 @@ class UploadQuotaListener
         }
     }
 
-    private function rejectSiteUpload($event, int $siteId, int $size): void
+    private function rejectSiteUpload($event, int $siteId, int $size, int $pendingBytes): void
     {
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
         $quotaMB = round($manager->getSiteQuota($siteId) / (1024 * 1024), 2);
-        $usedMB = round($manager->getUsedDiskSpaceBySite($siteId) / (1024 * 1024), 2);
+        $usedMB = round(($manager->getUsedDiskSpaceBySite($siteId) + $pendingBytes) / (1024 * 1024), 2);
         $sizeMB = round($size / (1024 * 1024), 2);
         error_log(sprintf(
             'DiskQuota: Upload rejected for site %d. File size: %s MB, Used: %s MB, Limit: %s MB',

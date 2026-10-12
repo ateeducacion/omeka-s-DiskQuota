@@ -110,3 +110,8 @@ msgstr ""
 #, php-format
 msgid " E.g., 15 = warn at 85% usage."
 msgstr ""
+
+#: src/Listener/SiteAssignmentListener.php
+#, php-format
+msgid "Site assignment rejected: quota exceeded for site %s."
+msgstr ""
