@@ -29,7 +29,7 @@ class UserQuotaListener
         $currentUser = $this->services->get('Omeka\AuthenticationService')->getIdentity();
         $isAdmin = $currentUser && $currentUser->getRole() === 'global_admin';
         $this->addQuotaField($form->get('user-settings'), $data['userQuota'], $isAdmin);
-        if ($user && $data['userQuota'] > 0) {
+        if ($user && $data['userQuota'] > 0 && $data['currentUsage'] !== null) {
             $html = $this->services->get('ViewRenderer')->partial('common/user-quota-usage', $data);
             $targetId = $isAdmin ? 'diskquota_user_quota' : 'diskquota_user_quota_display';
             QuotaFieldset::appendUsage($html, $targetId, true);
@@ -41,6 +41,9 @@ class UserQuotaListener
         $view = $event->getTarget();
         $user = $view->resource;
         $data = $this->getUsage($user, $user->id());
+        if ($data['currentUsage'] === null) {
+            return;
+        }
         if ($data['mediaCount'] === 'Unknown') {
             $data['mediaCount'] = $view->translate('Unknown');
         }
@@ -56,7 +59,12 @@ class UserQuotaListener
             $settings->setTargetId($userId);
             $data['userQuota'] = $settings->get('diskquota_user_quota', $defaultQuota);
             $manager = $this->services->get('DiskQuota\DiskQuotaManager');
-            $data['currentUsage'] = $manager->getUsedDiskSpaceByUser($userId);
+            try {
+                $data['currentUsage'] = $manager->getUsedDiskSpaceByUser($userId);
+            } catch (\Exception $e) {
+                // The manager logs it; hide the usage block instead of showing a false 0.
+                $data['currentUsage'] = null;
+            }
             $data['mediaCount'] = $this->getMediaCount($userId);
         }
         return $data;

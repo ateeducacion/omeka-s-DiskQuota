@@ -28,7 +28,7 @@ class PendingUploads
                 unset($this->pending[$key]);
                 continue;
             }
-            if ($pending === $media) {
+            if ($pending === $media || $this->isAbandoned($pending, $media)) {
                 continue;
             }
             $pendingOwner = $pending->getOwner();
@@ -43,6 +43,24 @@ class PendingUploads
             }
         }
         return [$userBytes, $siteBytes];
+    }
+
+    /**
+     * A failed operation (e.g. validateEntity after api.hydrate.post) never persists its
+     * media: core skips persist on create and refreshes the item on update. Its bytes stop
+     * counting; its files are only deleted at shutdown, once nothing can still persist it.
+     */
+    private function isAbandoned($pending, $media): bool
+    {
+        $item = $pending->getItem();
+        if (!$this->services->has('Omeka\EntityManager') || $item === $media->getItem()) {
+            return false;
+        }
+        $entityManager = $this->services->get('Omeka\EntityManager');
+        if ($entityManager->contains($pending)) {
+            return false;
+        }
+        return !($item && $entityManager->contains($item) && $item->getMedia()->contains($pending));
     }
 
     public function track($media, int $size): void

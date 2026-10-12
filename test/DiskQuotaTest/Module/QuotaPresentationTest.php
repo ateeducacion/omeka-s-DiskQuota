@@ -143,6 +143,30 @@ class QuotaPresentationTest extends TestCase
         return [[true, true, false], [true, false, true], [false, false, false], [false, false, true]];
     }
 
+    public function testFailedUsageQueryHidesTheUsageInsteadOfShowingZero(): void
+    {
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->method('getUsedDiskSpaceByUser')->willThrowException(new \RuntimeException('DB down'));
+        $manager->method('getUsedDiskSpaceBySite')->willThrowException(new \RuntimeException('DB down'));
+        $services = new ServiceManager();
+        $services->setService('Omeka\Connection', $this->createSiteDatabase());
+        $services->setService('Omeka\Settings', new \Omeka\Settings());
+        $services->setService('Omeka\Settings\User', $this->settings(7, 500));
+        $services->setService('Omeka\Settings\Site', $this->settings(10, 500));
+        $services->setService('DiskQuota\DiskQuotaManager', $manager);
+        $search = $this->double(['getTotalResults' => 2]);
+        $services->setService('Omeka\ApiManager', $this->double(['search' => $search]));
+        $view = $this->double(['partial' => 'usage']);
+        $view->expects($this->never())->method('partial');
+        $view->resource = $this->double(['id' => 7]);
+        $view->site = $this->double(['id' => 10]);
+        $this->expectOutputString('');
+        $users = new \DiskQuota\Listener\UserQuotaListener($services);
+        $users->viewUserQuotaDetails(new Event('view.details', $view));
+        $sites = new \DiskQuota\Listener\SiteQuotaListener($services);
+        $sites->viewSiteQuotaDetails(new Event('view.show.after', $view));
+    }
+
     public function testUnrelatedFormsAndMissingSiteAreIgnored(): void
     {
         $services = new ServiceManager();

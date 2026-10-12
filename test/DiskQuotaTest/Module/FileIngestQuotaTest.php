@@ -208,6 +208,47 @@ class FileIngestQuotaTest extends TestCase
         $this->assertNotContains($other, $this->deleted);
     }
 
+    public function testFilesOfAFailedItemStopCountingButAreOnlyDeletedAtShutdown(): void
+    {
+        $this->setQuota('user');
+        $failed = $this->media(1, [10]);
+        $kept = $this->media(1, [10]);
+        $collection = $this->getMockBuilder(\stdClass::class)->addMethods(['contains'])->getMock();
+        $collection->method('contains')->willReturnCallback(fn ($media) => $media === $kept);
+        foreach ([$failed, $kept] as $media) {
+            $media->getItem()->method('getMedia')->willReturn($collection);
+        }
+        // Core persists the kept item; the failed one never reaches persist (validateEntity threw).
+        $entityManager = $this->getMockBuilder(\stdClass::class)->addMethods(['contains', 'detach'])->getMock();
+        $entityManager->method('contains')->willReturnCallback(fn ($entity) => $entity === $kept->getItem());
+        $this->services->setService('Omeka\\EntityManager', $entityManager);
+        $this->ingest($failed, 60);
+        $this->ingest($kept, 40);
+        $this->ingest($this->media(1, [10]), 60);
+        $this->assertSame([], $this->deleted);
+        $this->services->get(UploadQuotaListener::class)->cleanupUnpersistedFiles();
+        $this->assertContains($failed, $this->deleted);
+    }
+
+    public function testRejectionReportsTheFileSizeAndCountsPendingFilesAsUsed(): void
+    {
+        $mb = 1024 * 1024;
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->method('isQuotaExceeded')->willReturnCallback(fn ($id, $bytes) => $bytes > 100 * $mb);
+        $manager->method('getUserQuota')->willReturn(100 * $mb);
+        $manager->method('getUsedDiskSpaceByUser')->willReturn(0);
+        $this->services->setService('DiskQuota\\DiskQuotaManager', $manager);
+        $this->ingest($this->media(1, []), 60 * $mb);
+        $errors = new ErrorStore();
+        try {
+            $this->ingest($this->media(1, []), 50 * $mb, 'create', true, $errors);
+            $this->fail('The second file must be rejected.');
+        } catch (ValidationException $e) {
+            $message = (string) $errors->getErrors()['file'][0];
+            $this->assertStringContainsString('File: 50 MB, Used: 60 MB', $message);
+        }
+    }
+
     private function setQuota(string $scope): void
     {
         $manager = $this->createMock(DiskQuotaManager::class);
@@ -237,7 +278,7 @@ class FileIngestQuotaTest extends TestCase
             $site->method('getId')->willReturn($siteId);
             $sites[] = $site;
         }
-        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getSites'])->getMock();
+        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getSites', 'getMedia'])->getMock();
         $item->method('getSites')->willReturn($sites);
         $media = $this->getMockBuilder(\stdClass::class)->addMethods(['getId', 'getOwner', 'getItem'])->getMock();
         $media->method('getId')->willReturn($id);
@@ -246,14 +287,19 @@ class FileIngestQuotaTest extends TestCase
         return $media;
     }
 
-    private function ingest($media, int $size, string $operation = 'create', bool $original = true): void
-    {
+    private function ingest(
+        $media,
+        int $size,
+        string $operation = 'create',
+        bool $original = true,
+        ?ErrorStore $errors = null
+    ): void {
         $file = $this->getMockBuilder(\stdClass::class)->addMethods(['getSize'])->getMock();
         $file->method('getSize')->willReturn($size);
         $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
         $request->method('getOperation')->willReturn($operation);
         $request->method('getContent')->willReturn(['o:ingester' => 'url', 'o:size' => 1]);
-        $errors = new ErrorStore();
+        $errors = $errors ?? new ErrorStore();
         $this->events->triggerEvent(new Event('media.ingest_file.pre', $media, [
             'request' => $request, 'tempFile' => $file, 'storeOriginal' => $original, 'errorStore' => $errors,
         ]));

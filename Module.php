@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace DiskQuota;
 
+use DiskQuota\Listener\SiteAssignmentListener;
 use DiskQuota\Listener\SiteQuotaListener;
 use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Listener\UserQuotaListener;
@@ -38,7 +39,12 @@ class Module extends AbstractModule
                 return new Service\DiskQuotaManager($services);
             },
         ];
-        foreach ([UploadQuotaListener::class, UserQuotaListener::class, SiteQuotaListener::class] as $class) {
+        foreach ([
+            UploadQuotaListener::class,
+            UserQuotaListener::class,
+            SiteQuotaListener::class,
+            SiteAssignmentListener::class,
+        ] as $class) {
             $factories[$class] = function ($services) use ($class) {
                 return new $class($services);
             };
@@ -92,6 +98,11 @@ class Module extends AbstractModule
         foreach (['Omeka\Api\Adapter\ItemAdapter', 'Omeka\Api\Adapter\MediaAdapter'] as $adapter) {
             $sharedEventManager->attach($adapter, 'api.hydrate.post', [$uploads, 'cleanupFailedHydration'], -1000);
         }
+        $sharedEventManager->attach(
+            'Omeka\Api\Adapter\ItemAdapter',
+            'api.hydrate.post',
+            [$services->get(SiteAssignmentListener::class), 'check']
+        );
 
         // Add disk quota tab to user edit page
         $sharedEventManager->attach(
@@ -140,13 +151,6 @@ class Module extends AbstractModule
             'Omeka\Controller\SiteAdmin\Index',
             'site.save.post',
             [$sites, 'handleSiteQuotaForm']
-        );
-        
-        // Hydration provides the error store and also runs for nested media.
-        $sharedEventManager->attach(
-            'Omeka\Api\Adapter\MediaAdapter',
-            'api.hydrate.pre',
-            [$uploads, 'checkSiteQuotaBeforeUpload']
         );
     }
 
