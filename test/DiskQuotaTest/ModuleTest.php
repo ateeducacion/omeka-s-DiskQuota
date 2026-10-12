@@ -69,9 +69,9 @@ class ModuleTest extends TestCase
         $users = $services->get(\DiskQuota\Listener\UserQuotaListener::class);
         $sites = $services->get(\DiskQuota\Listener\SiteQuotaListener::class);
         $expected = [
-            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
-            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.pre', $uploads, 'checkUserQuotaBeforeUpload'],
-            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.create.pre', $uploads, 'checkUserQuotaBeforeUpload'],
+            ['Omeka\\File\\TempFile', 'media.ingest_file.pre', $uploads, 'checkIngestFileQuota'],
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],
             ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.pre', $uploads, 'checkSiteQuotaBeforeUpload'],
             ['Omeka\\Form\\UserForm', 'form.add_elements', $users, 'addUserQuotaFieldset'],
             ['Omeka\\Controller\\Admin\\User', 'view.details', $users, 'viewUserQuotaDetails'],

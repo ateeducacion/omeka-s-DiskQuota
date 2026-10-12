@@ -21,9 +21,32 @@ bash test/integration/run-sqlite.sh /path/to/disposable/omeka /path/to/omeka-s-c
 PHP needs Omeka's required extensions, including `pdo_sqlite` and `fileinfo`;
 ImageMagick's `convert` command must also be available, as in the CI job.
 
-The runner prints the four checks and fails on an HTTP error or missing
-`AUDIT_RESULT=PASS`. The PHP server and temporary database/uploads are removed
+The runner executes three HTTP regressions, printing their checks and failing on
+any HTTP error or missing `AUDIT_RESULT=PASS`. Both PHP servers and the temporary database/uploads are removed
 on exit. Installed Omeka data remains in the disposable checkout.
+
+- `contradictory-item.php`: explicit item overrides and pending site assignments.
+- `pending-uploads.php`: the selected multipart file, aggregate user/site quotas,
+  failed item creation/update cleanup, retry, exact limits and final media ownership.
+- `url-ingestion.php`: real local HTTP downloads without multipart data, unknown
+  and forged sizes, user/site limits, unlimited quotas and `store_original=false`.
+
+The second server serves generated download fixtures on loopback port 8766;
+the application test server listens on 8765. The runner collects failures across
+all scripts. Use it once against a clean disposable installation.
+
+Quota enforcement runs on `media.ingest_file.pre`, after Omeka has the real
+temporary file and has resolved its owner/item, and before permanent storage.
+Pending originals are counted separately from persisted media. Failed hydration
+removes only new files using Omeka's original/thumbnail deletion routine;
+shutdown cleanup also removes tracked originals that were never persisted.
+Usage query errors propagate rather than being treated as zero usage.
+
+Scope: request-local pending files and ingesters using Omeka's TempFile pipeline.
+Parallel PHP requests, mutable ingester updates and reassigning existing media
+to another owner/site still need separate accounting. Quotas count originals,
+matching the module's existing usage queries; temporary files and thumbnails
+are not included.
 
 For manual testing against an already installed disposable instance:
 

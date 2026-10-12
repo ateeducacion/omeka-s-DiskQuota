@@ -7,9 +7,16 @@ use Laminas\Http\Request;
 
 class UploadSizeResolver
 {
-    /** Preserve the supported first-file behavior, then fall back to API metadata. */
+    /** Resolve the selected multipart file; downloaded media are checked during ingestion. */
     public function getSize($httpRequest, array $data): int
     {
+        if (($data['o:ingester'] ?? null) === 'url') {
+            return 0;
+        }
+        if (isset($data['file_index'])) {
+            $files = $httpRequest instanceof Request ? $httpRequest->getFiles()->toArray() : [];
+            return $this->getFileSize($files['file'][$data['file_index']] ?? null) ?? 0;
+        }
         $size = $httpRequest instanceof Request
             ? $this->getHttpSize($httpRequest->getFiles()->toArray()) : 0;
         if ($size > 0) {

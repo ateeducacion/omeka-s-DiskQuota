@@ -10,6 +10,34 @@ use PHPUnit\Framework\TestCase;
 
 class UploadSizeResolverTest extends TestCase
 {
+    /** @dataProvider indexedUploads */
+    public function testUsesOnlyTheFileSelectedByTheMedia(array $data, int $expected): void
+    {
+        $small = tempnam(sys_get_temp_dir(), 'quota-small-');
+        $large = tempnam(sys_get_temp_dir(), 'quota-large-');
+        file_put_contents($small, str_repeat('x', 12));
+        file_put_contents($large, str_repeat('x', 24));
+        try {
+            $request = new Request();
+            $request->setFiles(new Parameters(['file' => [
+                ['tmp_name' => $small], ['tmp_name' => $large],
+            ]]));
+            $this->assertSame($expected, (new UploadSizeResolver())->getSize($request, $data));
+        } finally {
+            unlink($small);
+            unlink($large);
+        }
+    }
+
+    public function indexedUploads(): array
+    {
+        return [
+            'second file' => [['file_index' => 1, 'o:size' => 1], 24],
+            'missing index has no known upload' => [['file_index' => 99, 'o:size' => 1], 0],
+            'URL does not use unrelated multipart files' => [['o:ingester' => 'url', 'o:size' => 1], 0],
+        ];
+    }
+
     /** @dataProvider metadataSizes */
     public function testMetadataFallback(array $data, int $expected): void
     {

@@ -42,7 +42,7 @@ class DiskQuotaManager
         } catch (\Exception $e) {
             // Log the error
             error_log('DiskQuota: Error calculating user disk usage: ' . $e->getMessage());
-            return 0;
+            throw $e;
         }
     }
     
@@ -70,7 +70,7 @@ class DiskQuotaManager
         } catch (\Exception $e) {
             // Log the error
             error_log('DiskQuota: Error calculating site disk usage: ' . $e->getMessage());
-            return 0;
+            throw $e;
         }
     }
     
