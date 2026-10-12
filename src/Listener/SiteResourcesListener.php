@@ -10,6 +10,10 @@ use Laminas\ServiceManager\ServiceLocatorInterface;
  *
  * Core's UpdateSiteItems job writes item_site with SQL, so no API event sees it; the
  * resources action is its only dispatcher in core and is checked before it runs.
+ *
+ * Note: the check runs when the job is queued, not when it writes. Two assignments to the
+ * same site submitted before the first job finishes can overshoot by one assignment; the
+ * next one sees the real usage. A lock spanning the request and the core job would be needed.
  */
 class SiteResourcesListener
 {
@@ -32,10 +36,12 @@ class SiteResourcesListener
             return null;
         }
         $siteId = (int) $controller->currentSite()->id();
-        parse_str((string) $request->getPost('item_pool', ''), $query);
-        $itemIds = $this->services->get('Omeka\ApiManager')
-            ->search('items', $query, ['returnScalar' => 'id'])->getContent();
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
+        if ($manager->getSiteQuota($siteId) <= 0) {
+            return null;
+        }
+        parse_str((string) $request->getPost('item_pool', ''), $query);
+        $itemIds = $this->searchItemIds($query);
         // Replace unassigns every item first, so the result is the pool alone.
         $bytes = $action === 'add'
             ? $this->getOriginalBytes($itemIds, $siteId)
@@ -47,6 +53,25 @@ class SiteResourcesListener
             'Item assignment rejected: the items would exceed the site disk quota.' // @translate
         );
         return $controller->redirect()->refresh();
+    }
+
+    /**
+     * Resolve the pool like UpdateSiteItems does: the job grants view-all, so it also assigns
+     * private items the submitting user cannot see. Grant it only around this search.
+     */
+    private function searchItemIds(array $query): array
+    {
+        $acl = $this->services->get('Omeka\Acl');
+        $api = $this->services->get('Omeka\ApiManager');
+        if ($acl->isAllowed(null, 'Omeka\Entity\Resource', 'view-all')) {
+            return $api->search('items', $query, ['returnScalar' => 'id'])->getContent();
+        }
+        $acl->allow(null, 'Omeka\Entity\Resource', 'view-all');
+        try {
+            return $api->search('items', $query, ['returnScalar' => 'id'])->getContent();
+        } finally {
+            $acl->removeAllow(null, 'Omeka\Entity\Resource', 'view-all');
+        }
     }
 
     private function getOriginalBytes(array $itemIds, ?int $exceptSiteId = null): int

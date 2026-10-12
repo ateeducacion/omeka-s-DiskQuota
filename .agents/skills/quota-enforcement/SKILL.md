@@ -6,9 +6,9 @@ description: "Change upload quota checks, user/site quota settings, or disk-usag
 # Quota enforcement
 
 Trace the event registrations in `Module.php` through `src/Listener/*QuotaListener.php`,
-`src/Listener/SiteAssignmentListener.php`, `src/Service/PendingUploads.php`,
-`src/Service/DiskQuotaManager.php`, and the settings forms. Upload checks run on
-`media.ingest_file.pre` against the real temp file, for every ingester.
+`src/Listener/SiteAssignmentListener.php`, `src/Listener/SiteResourcesListener.php`,
+`src/Service/PendingUploads.php`, `src/Service/DiskQuotaManager.php`, and the settings forms.
+Upload checks run on `media.ingest_file.pre` against the real temp file, for every ingester.
 The listener services own upload checks and user/site display and settings handlers.
 
 - Settings are expressed in MB; usage is bytes. Preserve the `1024 * 1024` conversion and the

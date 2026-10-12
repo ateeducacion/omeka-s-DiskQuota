@@ -26,6 +26,7 @@ class SiteResourcesListenerTest extends TestCase
         $checked = [];
         $manager = $this->createMock(DiskQuotaManager::class);
         // Site 10 already holds items 1 and 2 (500 bytes of originals).
+        $manager->method('getSiteQuota')->with(10)->willReturn(1000);
         $manager->method('getUsedDiskSpaceBySite')->with(10)->willReturn(500);
         $manager->method('isSiteQuotaExceeded')->willReturnCallback(
             function ($siteId, $bytes) use (&$checked, $full) {
@@ -36,9 +37,16 @@ class SiteResourcesListenerTest extends TestCase
         $services = new ServiceManager();
         $services->setService('Omeka\Connection', $this->createSiteDatabase());
         $services->setService('DiskQuota\DiskQuotaManager', $manager);
-        $api = $this->double(['search' => $this->double(['getContent' => $itemIds])]);
+        $acl = $this->acl(false);
+        $services->setService('Omeka\Acl', $acl);
+        $api = $this->getMockBuilder(\stdClass::class)->addMethods(['search'])->getMock();
         $api->expects($this->once())->method('search')
-            ->with('items', ['resource_class_id' => ['5']], ['returnScalar' => 'id']);
+            ->with('items', ['resource_class_id' => ['5']], ['returnScalar' => 'id'])
+            ->willReturnCallback(function () use ($acl, $itemIds) {
+                // The job assigns private items too, so the pool must be resolved with view-all.
+                $this->assertTrue($acl->granted);
+                return $this->double(['getContent' => $itemIds]);
+            });
         $services->setService('Omeka\ApiManager', $api);
         $response = new Response();
         $messenger = $this->double(['addError' => null]);
@@ -53,6 +61,7 @@ class SiteResourcesListenerTest extends TestCase
         );
         $this->assertSame($expectedBytes === null ? [] : [[10, $expectedBytes]], $checked);
         $this->assertSame($full ? $response : null, $result);
+        $this->assertFalse($acl->granted, 'view-all must not outlive the search');
     }
 
     public function assignmentCases(): array
@@ -65,6 +74,42 @@ class SiteResourcesListenerTest extends TestCase
             'replace that shrinks the site is allowed' => ['replace', [3], null, false],
             'empty pool' => ['add', [], null, false],
         ];
+    }
+
+    public function testUnlimitedSitesSkipTheSearch(): void
+    {
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->method('getSiteQuota')->with(10)->willReturn(0);
+        $manager->expects($this->never())->method('isSiteQuotaExceeded');
+        $api = $this->getMockBuilder(\stdClass::class)->addMethods(['search'])->getMock();
+        $api->expects($this->never())->method('search');
+        $services = new ServiceManager();
+        $services->setService('DiskQuota\DiskQuotaManager', $manager);
+        $services->setService('Omeka\ApiManager', $api);
+        $controller = $this->double(['currentSite' => $this->double(['id' => 10])]);
+        $this->assertNull((new SiteResourcesListener($services))->checkItemAssignment(
+            $this->event($controller, 'resources', $this->post('replace'))
+        ));
+    }
+
+    public function testAnExistingViewAllGrantIsLeftInPlace(): void
+    {
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->method('getSiteQuota')->willReturn(1000);
+        $acl = $this->acl(true);
+        $services = new ServiceManager();
+        $services->setService('Omeka\Connection', $this->createSiteDatabase());
+        $services->setService('DiskQuota\DiskQuotaManager', $manager);
+        $services->setService('Omeka\Acl', $acl);
+        $services->setService('Omeka\ApiManager', $this->double([
+            'search' => $this->double(['getContent' => []]),
+        ]));
+        $controller = $this->double(['currentSite' => $this->double(['id' => 10])]);
+        (new SiteResourcesListener($services))->checkItemAssignment(
+            $this->event($controller, 'resources', $this->post('add'))
+        );
+        $this->assertTrue($acl->granted);
+        $this->assertSame([], $acl->changes);
     }
 
     /** @dataProvider ignoredCases */
@@ -85,6 +130,33 @@ class SiteResourcesListenerTest extends TestCase
             'remove' => ['resources', $this->post('remove')],
             'no action' => ['resources', $this->post('no_action')],
         ];
+    }
+
+    private function acl(bool $granted)
+    {
+        return new class ($granted) {
+            public $granted;
+            public $changes = [];
+            public function __construct(bool $granted)
+            {
+                $this->granted = $granted;
+            }
+            public function isAllowed($role, $resource, $privilege): bool
+            {
+                return $role === null && $resource === 'Omeka\Entity\Resource' && $privilege === 'view-all'
+                    && $this->granted;
+            }
+            public function allow($role, $resource, $privilege): void
+            {
+                $this->changes[] = ['allow', $role, $resource, $privilege];
+                $this->granted = true;
+            }
+            public function removeAllow($role, $resource, $privilege): void
+            {
+                $this->changes[] = ['removeAllow', $role, $resource, $privilege];
+                $this->granted = false;
+            }
+        };
     }
 
     private function post(string $action): Request

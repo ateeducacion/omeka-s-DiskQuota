@@ -3,6 +3,7 @@ $routes = [
     '/contradictory-item' => 'contradictory-item.php',
     '/pending-uploads' => 'pending-uploads.php',
     '/site-assignment' => 'site-assignment.php',
+    '/site-resources' => 'site-resources.php',
     '/url-ingestion' => 'url-ingestion.php',
 ];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
