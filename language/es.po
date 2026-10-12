@@ -112,3 +112,7 @@ msgstr " Ej.: 15 = avisar al alcanzar el 85% del uso."
 #, php-format
 msgid "Site assignment rejected: quota exceeded for site %s."
 msgstr "Asignación de sitio rechazada: se ha superado la cuota del sitio %s."
+
+#: src/Listener/SiteResourcesListener.php
+msgid "Item assignment rejected: the items would exceed the site disk quota."
+msgstr "Asignación de ítems rechazada: los ítems superarían la cuota de disco del sitio."

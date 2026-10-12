@@ -21,7 +21,7 @@ bash test/integration/run-sqlite.sh /path/to/disposable/omeka /path/to/omeka-s-c
 PHP needs Omeka's required extensions, including `pdo_sqlite` and `fileinfo`;
 ImageMagick's `convert` command must also be available, as in the CI job.
 
-The runner executes four HTTP regressions, printing their checks and failing on
+The runner executes five HTTP regressions, printing their checks and failing on
 any HTTP error or missing `AUDIT_RESULT=PASS`. Both PHP servers and the temporary database/uploads are removed
 on exit. Installed Omeka data remains in the disposable checkout.
 
@@ -30,6 +30,9 @@ on exit. Installed Omeka data remains in the disposable checkout.
   failed item creation/update cleanup, retry, exact limits and final media ownership.
 - `site-assignment.php`: adding an existing item to a site, alone and together
   with a new upload in the same update, against the site's remaining quota.
+- `site-resources.php`: the real site admin > Resources action, dispatched as an
+  author with site admin permission, with private items of another owner in the
+  pool and core's `UpdateSiteItems` job run synchronously.
 - `url-ingestion.php`: real local HTTP downloads without multipart data, unknown
   and forged sizes, user/site limits, unlimited quotas, `store_original=false`
   and removal of real thumbnails after rejecting a batch.

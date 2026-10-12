@@ -5,6 +5,7 @@ namespace DiskQuota;
 
 use DiskQuota\Listener\SiteAssignmentListener;
 use DiskQuota\Listener\SiteQuotaListener;
+use DiskQuota\Listener\SiteResourcesListener;
 use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Listener\UserQuotaListener;
 use Laminas\EventManager\SharedEventManagerInterface;
@@ -44,6 +45,7 @@ class Module extends AbstractModule
             UserQuotaListener::class,
             SiteQuotaListener::class,
             SiteAssignmentListener::class,
+            SiteResourcesListener::class,
         ] as $class) {
             $factories[$class] = function ($services) use ($class) {
                 return new $class($services);
@@ -146,6 +148,14 @@ class Module extends AbstractModule
             [$sites, 'handleSiteQuotaForm']
         );
         
+        // Site admin > Resources assigns items through a job that writes item_site directly.
+        $sharedEventManager->attach(
+            'Omeka\Controller\SiteAdmin\IndexController',
+            'dispatch',
+            [$services->get(SiteResourcesListener::class), 'checkItemAssignment'],
+            10
+        );
+
         // Also attach to the site.save.post event for form submissions
         $sharedEventManager->attach(
             'Omeka\Controller\SiteAdmin\Index',

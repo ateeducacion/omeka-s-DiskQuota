@@ -69,7 +69,9 @@ class ModuleTest extends TestCase
         $users = $services->get(\DiskQuota\Listener\UserQuotaListener::class);
         $sites = $services->get(\DiskQuota\Listener\SiteQuotaListener::class);
         $assignments = $services->get(\DiskQuota\Listener\SiteAssignmentListener::class);
+        $resources = $services->get(\DiskQuota\Listener\SiteResourcesListener::class);
         $expected = [
+            ['Omeka\\Controller\\SiteAdmin\\IndexController', 'dispatch', $resources, 'checkItemAssignment'],
             ['Omeka\\File\\TempFile', 'media.ingest_file.pre', $uploads, 'checkIngestFileQuota'],
             ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],
             ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],

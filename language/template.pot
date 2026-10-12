@@ -115,3 +115,7 @@ msgstr ""
 #, php-format
 msgid "Site assignment rejected: quota exceeded for site %s."
 msgstr ""
+
+#: src/Listener/SiteResourcesListener.php
+msgid "Item assignment rejected: the items would exceed the site disk quota."
+msgstr ""
