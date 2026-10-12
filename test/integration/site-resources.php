@@ -58,12 +58,14 @@ try {
         ->setSite($api->read('sites', $site->id())->getContent());
     $form = $services->get('FormElementManager')->get(Omeka\Form\SiteResourcesForm::class);
     $csrf = array_values(array_filter($form->getElements(), fn ($e) => $e instanceof Laminas\Form\Element\Csrf))[0];
-    $submit = function (array $itemIds) use ($app, $services, $csrf) {
+    $submit = function (array $itemIds, string $action = 'add') use ($app, $services, $csrf, $auth, $em, $siteAdmin) {
+        // Each real request loads its identity; the synchronous job clears the entity manager.
+        $auth->getStorage()->write($em->find(Omeka\Entity\User::class, $siteAdmin->id()));
         $request = new Laminas\Http\Request();
         $request->setUri('http://localhost/admin/site/s/resources-quota/resources');
         $request->setMethod(Laminas\Http\Request::METHOD_POST);
         $request->setPost(new Laminas\Stdlib\Parameters([
-            'item_assignment_action' => 'add',
+            'item_assignment_action' => $action,
             'item_pool' => http_build_query(['id' => $itemIds]),
             'save_search' => '0',
             $csrf->getName() => $csrf->getValue(),
@@ -98,6 +100,15 @@ try {
     $submit([$public->id()]);
     $check($jobs() === $before + 1, 'a pool that fits runs the core job');
     $check($assigned() === [$public->id()], 'the accepted assignment reaches item_site');
+
+    // Replace unassigns the site first: the result is the pool alone, whatever the site held.
+    // The synchronous core job above left view-all granted in this process; visibility is covered.
+    $submit([$private->id(), $public->id()], 'replace');
+    $check($jobs() === $before + 1, 'a replace pool over quota queues no job');
+    $check($assigned() === [$public->id()], 'the rejected replace keeps the current assignment');
+    $submit([$private->id()], 'replace');
+    $check($jobs() === $before + 2, 'a replace pool that fits runs the core job');
+    $check($assigned() === [$private->id()], 'the accepted replace swaps the site items');
     echo 'AUDIT_RESULT=' . ($failures ? 'FAIL' : 'PASS') . "\n";
     if ($failures) {
         http_response_code(500);

@@ -11,9 +11,10 @@ use Laminas\ServiceManager\ServiceLocatorInterface;
  * Core's UpdateSiteItems job writes item_site with SQL, so no API event sees it; the
  * resources action is its only dispatcher in core and is checked before it runs.
  *
- * Note: the check runs when the job is queued, not when it writes. Two assignments to the
- * same site submitted before the first job finishes can overshoot by one assignment; the
- * next one sees the real usage. A lock spanning the request and the core job would be needed.
+ * Note: the check runs when the job is queued, not when it writes. Assignments to the same
+ * site submitted before earlier jobs finish are all checked against the same usage, so they
+ * can exceed the quota together; later ones see the real usage. Preventing it would need a
+ * lock spanning the request and the core job.
  */
 class SiteResourcesListener
 {
