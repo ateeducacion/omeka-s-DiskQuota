@@ -237,7 +237,7 @@ class FileIngestQuotaTest extends TestCase
             $site->method('getId')->willReturn($siteId);
             $sites[] = $site;
         }
-        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getSites'])->getMock();
+        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getSites', 'getId'])->getMock();
         $item->method('getSites')->willReturn($sites);
         $media = $this->getMockBuilder(\stdClass::class)->addMethods(['getId', 'getOwner', 'getItem'])->getMock();
         $media->method('getId')->willReturn($id);

@@ -62,7 +62,7 @@ class SiteMembershipTest extends TestCase
         $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
         $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
         $errors->expects($this->once())->method('addError');
-        $services = new ServiceManager();
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
         $services->setService('DiskQuota\\DiskQuotaManager', $manager);
         $services->setService('Omeka\\Connection', $this->createSiteDatabase());
         $services->setService('Request', new Request());
@@ -75,6 +75,37 @@ class SiteMembershipTest extends TestCase
         $request->method('getContent')->willReturn($data);
         (new UploadQuotaListener($services))->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, [
             'request' => $request, 'entity' => $media, 'errorStore' => $errors,
+        ]));
+    }
+
+    public function testCachedSitesCannotBypassAConcurrentSiteAssignment(): void
+    {
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
+        $db = $this->createSiteDatabase();
+        $db->exec('UPDATE item_site SET site_id = 20 WHERE item_id = 1');
+        $services->setService('Omeka\Connection', $db);
+        $services->setService('Request', new Request());
+        $manager = $this->createMock(DiskQuotaManager::class);
+        $manager->expects($this->once())->method('isSiteQuotaExceeded')->with(20, 100)->willReturn(false);
+        $services->setService('DiskQuota\DiskQuotaManager', $manager);
+        $site = $this->getMockBuilder(\stdClass::class)->addMethods(['getId'])->getMock();
+        $site->method('getId')->willReturn(10);
+        $sites = new class([$site]) extends \ArrayIterator {
+            public function isDirty()
+            {
+                return false;
+            }
+        };
+        $item = $this->getMockBuilder(\stdClass::class)->addMethods(['getId', 'getSites'])->getMock();
+        $item->method('getId')->willReturn(1);
+        $item->method('getSites')->willReturn($sites);
+        $media = $this->getMockBuilder(\stdClass::class)->addMethods(['getItem'])->getMock();
+        $media->method('getItem')->willReturn($item);
+        $request = $this->getMockBuilder(\stdClass::class)->addMethods(['getOperation', 'getContent'])->getMock();
+        $request->method('getOperation')->willReturn('create');
+        $request->method('getContent')->willReturn(['o:size' => 100]);
+        (new UploadQuotaListener($services))->checkSiteQuotaBeforeUpload(new Event('api.hydrate.pre', null, [
+            'request' => $request, 'entity' => $media,
         ]));
     }
 
@@ -105,7 +136,7 @@ class SiteMembershipTest extends TestCase
         $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
         $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
         $errors->expects($fullSite === null ? $this->never() : $this->once())->method('addError');
-        $services = new ServiceManager();
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
         $services->setService('Omeka\Connection', $this->createSiteDatabase());
         $services->setService('DiskQuota\DiskQuotaManager', $manager);
         $services->setService('Request', new \stdClass());
@@ -140,7 +171,7 @@ class SiteMembershipTest extends TestCase
             $manager->method('getUsedDiskSpaceBySite')->willReturn(950);
             $errors = $this->getMockBuilder(\stdClass::class)->addMethods(['addError'])->getMock();
             $errors->expects($this->once())->method('addError');
-            $services = new ServiceManager();
+            $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
             $services->setService('Omeka\Connection', $this->createSiteDatabase());
             $services->setService('DiskQuota\DiskQuotaManager', $manager);
             $services->setService('Request', $http);
@@ -167,7 +198,7 @@ class SiteMembershipTest extends TestCase
         $request->method('getContent')->willReturn($data);
         $manager = $this->createMock(DiskQuotaManager::class);
         $manager->expects($this->never())->method('isSiteQuotaExceeded');
-        $services = new ServiceManager();
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
         $services->setService('Request', new Request());
         $services->setService('DiskQuota\\DiskQuotaManager', $manager);
         $module = new UploadQuotaListener($services);
@@ -191,7 +222,7 @@ class SiteMembershipTest extends TestCase
         $settings = $this->getMockBuilder(\stdClass::class)->addMethods(['get', 'setTargetId'])->getMock();
         $settings->method('get')->willReturn($quota);
         $settings->expects($this->atLeastOnce())->method('setTargetId')->with(10);
-        $services = new ServiceManager();
+        $services = new ServiceManager((new \DiskQuota\Module())->getServiceConfig());
         $services->setService('Omeka\\Connection', $db);
         $services->setService('Omeka\\Settings', new \Omeka\Settings());
         $services->setService('Omeka\\Settings\\Site', $settings);

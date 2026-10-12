@@ -60,4 +60,10 @@ run_test pending-uploads \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt"
 run_test url-ingestion
+if ! DISKQUOTA_TEST_ROOT="$core" php "$tests/site-assignments.php"; then
+    status=1
+fi
+if ! DISKQUOTA_TEST_ROOT="$core" php "$tests/concurrent-writes.php"; then
+    status=1
+fi
 exit "$status"

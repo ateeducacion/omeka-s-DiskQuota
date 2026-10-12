@@ -11,6 +11,8 @@ class PendingUploads
     private $services;
     private $pending = [];
     private $cleanupRegistered = false;
+    private $siteChanges = [];
+    private $continueBatch = false;
 
     public function __construct(ServiceLocatorInterface $services)
     {
@@ -20,8 +22,7 @@ class PendingUploads
     public function getUploadBytes($media, ?int $ownerId, int $size, array $siteIds): array
     {
         $userBytes = $size;
-        $siteBytes = array_fill_keys($siteIds, $size);
-        // shortcut: pending bytes are request-local; shared reservations are needed for concurrent uploads.
+        $siteBytes = $this->getSiteBytes($size, $siteIds);
         foreach ($this->pending as $key => $entry) {
             $pending = $entry['media'];
             if ($pending->getId() !== null) {
@@ -35,14 +36,58 @@ class PendingUploads
             if ($ownerId !== null && $pendingOwner && $pendingOwner->getId() === $ownerId) {
                 $userBytes += $entry['size'];
             }
-            foreach ($pending->getItem()?->getSites() ?? [] as $site) {
-                $siteId = $site->getId();
+            foreach ($this->services->get(SiteMembership::class)->getSiteIds([], $pending) as $siteId) {
                 if (isset($siteBytes[$siteId])) {
                     $siteBytes[$siteId] += $entry['size'];
                 }
             }
         }
         return [$userBytes, $siteBytes];
+    }
+
+    private function getSiteBytes(int $size, array $siteIds): array
+    {
+        $siteBytes = array_fill_keys($siteIds, $size);
+        foreach ($this->siteChanges as $change) {
+            foreach ($change['deltas'] as $siteId => $bytes) {
+                if (isset($siteBytes[$siteId])) {
+                    $siteBytes[$siteId] += $bytes;
+                }
+            }
+        }
+        return $siteBytes;
+    }
+
+    public function setSiteChanges($item, array $deltas): void
+    {
+        if (!$deltas) {
+            unset($this->siteChanges[$item->getId()]);
+            return;
+        }
+        $this->siteChanges[$item->getId()] = ['item' => $item, 'deltas' => $deltas];
+    }
+
+    public function setContinueBatch(bool $continue): void
+    {
+        $this->continueBatch = $continue;
+    }
+
+    public function rejectSiteChanges($item): void
+    {
+        unset($this->siteChanges[$item->getId()]);
+        if (!$this->continueBatch) {
+            $manager = $this->services->get('Omeka\EntityManager');
+            foreach ($this->siteChanges as $change) {
+                $manager->refresh($change['item']);
+            }
+            $this->clearSiteChanges();
+        }
+    }
+
+    public function clearSiteChanges(): void
+    {
+        $this->siteChanges = [];
+        $this->continueBatch = false;
     }
 
     public function track($media, int $size): void

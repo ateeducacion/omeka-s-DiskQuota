@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace DiskQuota\Listener;
 
 use DiskQuota\Service\PendingUploads;
+use DiskQuota\Service\SiteMembership;
 use DiskQuota\Service\UploadSizeResolver;
 use Laminas\ServiceManager\ServiceLocatorInterface;
 use Omeka\Api\Exception\ValidationException;
@@ -17,7 +18,7 @@ class UploadQuotaListener
     public function __construct(ServiceLocatorInterface $services)
     {
         $this->services = $services;
-        $this->pending = new PendingUploads($services);
+        $this->pending = $services->get(PendingUploads::class);
     }
 
     public function checkSiteQuotaBeforeUpload($event): void
@@ -34,14 +35,15 @@ class UploadQuotaListener
         if ($size <= 0) {
             return;
         }
-        $siteIds = $this->getSiteIds($data, $event->getParam('entity'));
+        $siteIds = $this->services->get(SiteMembership::class)->getSiteIds($data, $event->getParam('entity'));
         if (!$siteIds) {
             return;
         }
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
-        foreach ($siteIds as $siteId) {
-            if ($manager->isSiteQuotaExceeded($siteId, $size)) {
-                $this->rejectSiteUpload($event, $siteId, $size);
+        [, $siteBytes] = $this->pending->getUploadBytes($event->getParam('entity'), null, $size, $siteIds);
+        foreach ($siteBytes as $siteId => $bytes) {
+            if ($manager->isSiteQuotaExceeded($siteId, $bytes)) {
+                $this->rejectSiteUpload($event, $siteId, $bytes);
             }
         }
     }
@@ -66,7 +68,7 @@ class UploadQuotaListener
             $media,
             $ownerId,
             $size,
-            $this->getSiteIds([], $media)
+            $this->services->get(SiteMembership::class)->getSiteIds([], $media)
         );
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
         if ($ownerId !== null && $manager->isQuotaExceeded($ownerId, $userBytes)) {
@@ -100,35 +102,6 @@ class UploadQuotaListener
     private function getFileSize(array $data): int
     {
         return (new UploadSizeResolver())->getSize($this->services->get('Request'), $data);
-    }
-
-    private function getSiteIds(array $data, $entity): array
-    {
-        $siteIds = [];
-        $itemId = $data['o:item']['o:id'] ?? null;
-        // MediaAdapter honors an explicit o:item, even when ItemAdapter set a parent.
-        $item = $entity && method_exists($entity, 'getItem') ? $entity->getItem() : null;
-        if ($item && ($itemId === null || $itemId == $item->getId())) {
-            foreach ($item->getSites() as $site) {
-                $siteIds[] = (int) $site->getId();
-            }
-            return $siteIds;
-        }
-        if (!$itemId) {
-            return $siteIds;
-        }
-        try {
-            $connection = $this->services->get('Omeka\Connection');
-            $stmt = $connection->prepare('SELECT site_id FROM item_site WHERE item_id = ?');
-            $stmt->bindValue(1, $itemId);
-            $stmt->execute();
-            while (($siteId = $stmt->fetchColumn()) !== false) {
-                $siteIds[] = (int) $siteId;
-            }
-        } catch (\Exception $e) {
-            error_log('DiskQuota: Error determining site for item: ' . $e->getMessage());
-        }
-        return $siteIds;
     }
 
     private function rejectUserUpload($event, $userId, int $size): void

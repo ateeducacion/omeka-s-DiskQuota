@@ -68,7 +68,15 @@ class ModuleTest extends TestCase
         $uploads = $services->get(\DiskQuota\Listener\UploadQuotaListener::class);
         $users = $services->get(\DiskQuota\Listener\UserQuotaListener::class);
         $sites = $services->get(\DiskQuota\Listener\SiteQuotaListener::class);
+        $writes = $services->get(\DiskQuota\Listener\QuotaWriteListener::class);
+        $assignments = $services->get(\DiskQuota\Listener\SiteAssignmentListener::class);
         $expected = [
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.execute.pre', $writes, 'begin'],
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.pre', $writes, 'refreshItem'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.execute.pre', $writes, 'begin'],
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.execute.post', $writes, 'finish'],
+            ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.execute.post', $writes, 'finish'],
+            ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.post', $assignments, 'check'],
             ['Omeka\\File\\TempFile', 'media.ingest_file.pre', $uploads, 'checkIngestFileQuota'],
             ['Omeka\\Api\\Adapter\\ItemAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],
             ['Omeka\\Api\\Adapter\\MediaAdapter', 'api.hydrate.post', $uploads, 'cleanupFailedHydration'],

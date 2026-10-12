@@ -3,9 +3,13 @@ declare(strict_types=1);
 
 namespace DiskQuota;
 
+use DiskQuota\Listener\QuotaWriteListener;
+use DiskQuota\Listener\SiteAssignmentListener;
 use DiskQuota\Listener\SiteQuotaListener;
 use DiskQuota\Listener\UploadQuotaListener;
 use DiskQuota\Listener\UserQuotaListener;
+use DiskQuota\Service\PendingUploads;
+use DiskQuota\Service\SiteMembership;
 use Laminas\EventManager\SharedEventManagerInterface;
 use Laminas\Mvc\Controller\AbstractController;
 use Laminas\ServiceManager\ServiceLocatorInterface;
@@ -38,7 +42,10 @@ class Module extends AbstractModule
                 return new Service\DiskQuotaManager($services);
             },
         ];
-        foreach ([UploadQuotaListener::class, UserQuotaListener::class, SiteQuotaListener::class] as $class) {
+        foreach ([
+            UploadQuotaListener::class, UserQuotaListener::class, SiteQuotaListener::class,
+            PendingUploads::class, QuotaWriteListener::class, SiteAssignmentListener::class, SiteMembership::class,
+        ] as $class) {
             $factories[$class] = function ($services) use ($class) {
                 return new $class($services);
             };
@@ -92,6 +99,18 @@ class Module extends AbstractModule
         foreach (['Omeka\Api\Adapter\ItemAdapter', 'Omeka\Api\Adapter\MediaAdapter'] as $adapter) {
             $sharedEventManager->attach($adapter, 'api.hydrate.post', [$uploads, 'cleanupFailedHydration'], -1000);
         }
+
+        $writes = $services->get(QuotaWriteListener::class);
+        foreach (['Omeka\Api\Adapter\ItemAdapter', 'Omeka\Api\Adapter\MediaAdapter'] as $adapter) {
+            $sharedEventManager->attach($adapter, 'api.execute.pre', [$writes, 'begin'], 1000);
+            $sharedEventManager->attach($adapter, 'api.execute.post', [$writes, 'finish'], -2000);
+        }
+        $sharedEventManager->attach('Omeka\Api\Adapter\ItemAdapter', 'api.hydrate.pre', [$writes, 'refreshItem'], 900);
+        $sharedEventManager->attach(
+            'Omeka\Api\Adapter\ItemAdapter',
+            'api.hydrate.post',
+            [$services->get(SiteAssignmentListener::class), 'check']
+        );
 
         // Add disk quota tab to user edit page
         $sharedEventManager->attach(

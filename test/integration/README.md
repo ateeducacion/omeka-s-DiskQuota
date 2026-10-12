@@ -21,7 +21,7 @@ bash test/integration/run-sqlite.sh /path/to/disposable/omeka /path/to/omeka-s-c
 PHP needs Omeka's required extensions, including `pdo_sqlite` and `fileinfo`;
 ImageMagick's `convert` command must also be available, as in the CI job.
 
-The runner executes three HTTP regressions, printing their checks and failing on
+The runner executes three HTTP regressions and two CLI regressions, printing their checks and failing on
 any HTTP error or missing `AUDIT_RESULT=PASS`. Both PHP servers and the temporary database/uploads are removed
 on exit. Installed Omeka data remains in the disposable checkout.
 
@@ -31,6 +31,14 @@ on exit. Installed Omeka data remains in the disposable checkout.
 - `url-ingestion.php`: real local HTTP downloads without multipart data, unknown
   and forged sizes, user/site limits, unlimited quotas, `store_original=false`
   and removal of real thumbnails after rejecting a batch.
+- `site-assignments.php`: quota checks for existing originals, exact limits,
+  unchanged membership, removal, atomic rejection of quota-exceeding batches,
+  `continueOnError` and retries.
+- `concurrent-writes.php`: two independent PHP processes exercise simultaneous
+  user/site uploads, site assignments versus uploads, two site assignments,
+  and an upload using an item cached before another process moves it to a site.
+  A marker holds the first writer before flush; the second must wait, then reject
+  based on committed usage. Rejected operations must leave no orphan files/records.
 
 The second server serves generated download fixtures on loopback port 8766;
 the application test server listens on 8765. The runner collects failures across
@@ -44,9 +52,30 @@ shutdown cleanup also removes tracked files that were never persisted, including
 thumbnail-only media that do not consume the original-file quota.
 Usage query errors propagate rather than being treated as zero usage.
 
-Scope: request-local pending files and ingesters using Omeka's TempFile pipeline.
-Parallel PHP requests, mutable ingester updates and reassigning existing media
-to another owner/site still need separate accounting. Quotas count originals,
+Item/media API writes acquire a per-database lock on `api.execute.pre`, before
+hydration and usage reads. MySQL/MariaDB use `GET_LOCK` with a database-specific
+name; SQLite uses `flock` on `<canonical database path>.diskquota.lock`. The lock
+wait is bounded at 30 seconds and failures reject the write. The outer API
+`api.execute.post` releases it after flush; nested and batch subrequests cannot
+release it early. Shutdown cleans pending files before releasing an outstanding
+lock. Never delete the SQLite lock file while writers are active.
+
+Pending site deltas count retained persisted originals, subtract their old site
+membership and combine them with pending uploads. Quota-rejected non-continuing
+batches restore earlier pending site assignments; `continueOnError` retains the
+items that fit. Clean cached memberships are read from the database under the
+lock; dirty collections retain this operation's prepared assignments.
+
+Scope: standard item/media API operations, native batches and ingesters using
+Omeka's TempFile pipeline. This intentionally serializes writes for one database,
+including URL downloads, rather than adding a reservation table or core patch.
+MySQL clients must use the same primary server; SQLite writers must share the
+same canonical database/lock file. Existing outer database transactions are
+rejected to avoid stale snapshots. Custom deferred-flush operations and failures
+without an API-post event retain the lock until shutdown, so long-lived CLI jobs
+can delay other writers. Direct SQL/ORM changes, changing existing media owners,
+mutable ingester file replacements and ingesters outside TempFile remain outside
+this enforcement. Quotas count originals,
 matching the module's existing usage queries; temporary files and thumbnails
 are not included.
 
