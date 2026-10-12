@@ -7,7 +7,7 @@ of `.github/workflows/ci.yml`. The job checks out the SQLite-capable Omeka fork
 at `74a5e131f1881e9d565cf346ff090155b7ee833b`, installs its Composer dependencies
 and uses Omeka CLI 0.18.0, verified against its published SHA256, to install Omeka
 and activate this module. No production data or GitHub secrets are used.
-The disposable instance accepts `text/plain` and `application/octet-stream`
+The disposable instance accepts `image/png`, `text/plain` and `application/octet-stream`
 for the generated `.txt` fixture, whose detected MIME type varies by libmagic
 version; Omeka's file validation remains enabled.
 
@@ -29,7 +29,8 @@ on exit. Installed Omeka data remains in the disposable checkout.
 - `pending-uploads.php`: the selected multipart file, aggregate user/site quotas,
   failed item creation/update cleanup, retry, exact limits and final media ownership.
 - `url-ingestion.php`: real local HTTP downloads without multipart data, unknown
-  and forged sizes, user/site limits, unlimited quotas and `store_original=false`.
+  and forged sizes, user/site limits, unlimited quotas, `store_original=false`
+  and removal of real thumbnails after rejecting a batch.
 
 The second server serves generated download fixtures on loopback port 8766;
 the application test server listens on 8765. The runner collects failures across
@@ -39,7 +40,8 @@ Quota enforcement runs on `media.ingest_file.pre`, after Omeka has the real
 temporary file and has resolved its owner/item, and before permanent storage.
 Pending originals are counted separately from persisted media. Failed hydration
 removes only new files using Omeka's original/thumbnail deletion routine;
-shutdown cleanup also removes tracked originals that were never persisted.
+shutdown cleanup also removes tracked files that were never persisted, including
+thumbnail-only media that do not consume the original-file quota.
 Usage query errors propagate rather than being treated as zero usage.
 
 Scope: request-local pending files and ingesters using Omeka's TempFile pipeline.

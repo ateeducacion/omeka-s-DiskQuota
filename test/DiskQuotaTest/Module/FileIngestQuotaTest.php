@@ -176,6 +176,19 @@ class FileIngestQuotaTest extends TestCase
         $this->assertSame([$media], $this->deleted);
     }
 
+    public function testThumbnailOnlyFilesAreAlsoCleanedOnFailure(): void
+    {
+        $this->setQuota('none');
+        $media = $this->media(1, [10]);
+        $this->ingest($media, 1000, 'create', false);
+        $errors = new ErrorStore();
+        $errors->addError('file', 'Rejected operation');
+        $this->services->get(UploadQuotaListener::class)->cleanupFailedHydration(new Event('api.hydrate.post', null, [
+            'entity' => $media, 'errorStore' => $errors,
+        ]));
+        $this->assertSame([$media], $this->deleted);
+    }
+
     public function testFailedItemHydrationCleansOnlyItsNewFilesAndReleasesTheirBytes(): void
     {
         $this->setQuota('both');

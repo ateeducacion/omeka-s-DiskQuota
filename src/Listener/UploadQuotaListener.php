@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace DiskQuota\Listener;
 
+use DiskQuota\Service\PendingUploads;
 use DiskQuota\Service\UploadSizeResolver;
-use Laminas\EventManager\Event;
 use Laminas\ServiceManager\ServiceLocatorInterface;
 use Omeka\Api\Exception\ValidationException;
 use Omeka\Stdlib\Message;
@@ -12,12 +12,12 @@ use Omeka\Stdlib\Message;
 class UploadQuotaListener
 {
     private $services;
-    private $pending = [];
-    private $cleanupRegistered = false;
+    private $pending;
 
     public function __construct(ServiceLocatorInterface $services)
     {
         $this->services = $services;
+        $this->pending = new PendingUploads($services);
     }
 
     public function checkSiteQuotaBeforeUpload($event): void
@@ -48,39 +48,26 @@ class UploadQuotaListener
 
     public function checkIngestFileQuota($event): void
     {
-        if ($event->getParam('request')->getOperation() !== 'create' || !$event->getParam('storeOriginal')) {
+        if ($event->getParam('request')->getOperation() !== 'create') {
+            return;
+        }
+        if (!$event->getParam('storeOriginal')) {
+            $this->pending->track($event->getTarget(), 0);
             return;
         }
         $size = (int) $event->getParam('tempFile')->getSize();
         if ($size <= 0) {
-            $this->trackPendingFile($event->getTarget(), 0);
+            $this->pending->track($event->getTarget(), 0);
             return;
         }
         $media = $event->getTarget();
-        $owner = $media->getOwner();
-        $ownerId = $owner ? $owner->getId() : null;
-        $userBytes = $size;
-        $siteBytes = array_fill_keys($this->getSiteIds([], $media), $size);
-        // shortcut: pending bytes are request-local; shared reservations are needed for concurrent uploads.
-        foreach ($this->pending as $key => $entry) {
-            $pending = $entry['media'];
-            if ($pending->getId() !== null) {
-                unset($this->pending[$key]);
-                continue;
-            }
-            if ($pending === $media) {
-                continue;
-            }
-            $pendingOwner = $pending->getOwner();
-            if ($ownerId !== null && $pendingOwner && $pendingOwner->getId() === $ownerId) {
-                $userBytes += $entry['size'];
-            }
-            foreach ($this->getSiteIds([], $pending) as $siteId) {
-                if (isset($siteBytes[$siteId])) {
-                    $siteBytes[$siteId] += $entry['size'];
-                }
-            }
-        }
+        $ownerId = $media->getOwner()?->getId();
+        [$userBytes, $siteBytes] = $this->pending->getUploadBytes(
+            $media,
+            $ownerId,
+            $size,
+            $this->getSiteIds([], $media)
+        );
         $manager = $this->services->get('DiskQuota\DiskQuotaManager');
         if ($ownerId !== null && $manager->isQuotaExceeded($ownerId, $userBytes)) {
             $this->rejectUserUpload($event, $ownerId, $userBytes);
@@ -97,54 +84,17 @@ class UploadQuotaListener
             $exception->setErrorStore($errors);
             throw $exception;
         }
-        $this->trackPendingFile($media, $size);
-    }
-
-    private function trackPendingFile($media, int $size): void
-    {
-        $this->pending[spl_object_id($media)] = ['media' => $media, 'size' => $size];
-        if (!$this->cleanupRegistered) {
-            register_shutdown_function([$this, 'cleanupUnpersistedFiles']);
-            $this->cleanupRegistered = true;
-        }
+        $this->pending->track($media, $size);
     }
 
     public function cleanupFailedHydration($event): void
     {
-        if (!$event->getParam('errorStore')->hasErrors()) {
-            return;
-        }
-        $entity = $event->getParam('entity');
-        $media = method_exists($entity, 'getMedia') ? $entity->getMedia() : [$entity];
-        foreach ($media as $file) {
-            $key = spl_object_id($file);
-            if (isset($this->pending[$key]) && $file->getId() === null) {
-                $this->discardPendingFile($key);
-                if (is_object($media) && method_exists($media, 'removeElement')) {
-                    $media->removeElement($file);
-                }
-            }
-        }
+        $this->pending->cleanupFailedHydration($event);
     }
 
     public function cleanupUnpersistedFiles(): void
     {
-        foreach ($this->pending as $key => $entry) {
-            if ($entry['media']->getId() === null) {
-                $this->discardPendingFile($key);
-            }
-        }
-        $this->pending = [];
-    }
-
-    private function discardPendingFile(int $key): void
-    {
-        $media = $this->pending[$key]['media'];
-        $this->services->get('ModuleManager')->getModule('Omeka')->deleteMediaFiles(new Event('cleanup', $media));
-        if ($this->services->has('Omeka\EntityManager')) {
-            $this->services->get('Omeka\EntityManager')->detach($media);
-        }
-        unset($this->pending[$key]);
+        $this->pending->cleanupUnpersistedFiles();
     }
 
     private function getFileSize(array $data): int

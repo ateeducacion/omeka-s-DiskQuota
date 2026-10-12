@@ -25,6 +25,7 @@ ln -s "$(dirname "$(dirname "$tests")")" modules/DiskQuota
 php "$cli" core:install --admin-email admin@example.com --admin-password audit-test-password --title 'DiskQuota integration'
 php "$cli" module:install DiskQuota
 php -r 'foreach (["full" => 524288, "new" => 512, "small" => 204800, "large" => 409600, "over" => 1048576] as $name => $lines) { file_put_contents($argv[1] . "/$name.txt", str_repeat("x\n", $lines)); }' "$scratch"
+php -r 'file_put_contents($argv[1], base64_decode("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg=="));' "$scratch/tiny.png"
 php -S 127.0.0.1:8766 -t "$scratch" > "$scratch/downloads.log" 2>&1 &
 downloads=$!
 DISKQUOTA_TEST_ROOT="$core" php -d post_max_size=32M -d upload_max_filesize=8M \
@@ -56,6 +57,7 @@ run_test pending-uploads \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/large.txt" -F "file[]=@$scratch/large.txt" \
     -F "file[]=@$scratch/full.txt" -F "file[]=@$scratch/over.txt" -F "file[]=@$scratch/over.txt" \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/full.txt" \
-    -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt"
+    -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" \
+    -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt"
 run_test url-ingestion
 exit "$status"

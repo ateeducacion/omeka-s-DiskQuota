@@ -11,7 +11,9 @@ try {
     $admin = $services->get('Omeka\EntityManager')->getRepository(Omeka\Entity\User::class)
         ->findOneBy(['email' => 'admin@example.com']);
     $services->get('Omeka\AuthenticationService')->getStorage()->write($admin);
-    $services->get('Omeka\Settings')->set('media_type_whitelist', ['text/plain', 'application/octet-stream']);
+    $services->get('Omeka\Settings')->set('media_type_whitelist', [
+        'text/plain', 'application/octet-stream', 'image/png',
+    ]);
     $users = $services->get('Omeka\Settings\User');
     $users->setTargetId($admin->getId());
     $users->set('diskquota_user_quota', 0);
@@ -59,6 +61,27 @@ try {
     $users->setTargetId($admin->getId());
     $users->set('diskquota_user_quota', (int) ceil($manager->getUsedDiskSpaceByUser($admin->getId()) / 1048576) + 1);
     $reject($target, [], 'URL with unknown size obeys user quota');
+    $before = [
+        $db->fetchOne('SELECT COUNT(*) FROM media'), $db->fetchOne('SELECT COUNT(*) FROM item'),
+        glob($base . '/*/*'),
+    ];
+    $rejected = false;
+    try {
+        $api->create('items', [
+            'o:site' => [['o:id' => $other->id()]],
+            'o:media' => [
+                ['o:ingester' => 'url', 'ingest_url' => 'http://127.0.0.1:8766/tiny.png', 'store_original' => false],
+                ['o:ingester' => 'url', 'ingest_url' => 'http://127.0.0.1:8766/over.txt'],
+            ],
+        ]);
+    } catch (Omeka\Api\Exception\ValidationException $e) {
+        $rejected = isset($e->getErrorStore()->getErrors()['o:media'][0]['file']);
+    }
+    $check($rejected, 'URL batch rejects oversized original after thumbnail-only media');
+    $check($before == [
+        $db->fetchOne('SELECT COUNT(*) FROM media'), $db->fetchOne('SELECT COUNT(*) FROM item'),
+        glob($base . '/*/*'),
+    ], 'rejected URL batch leaves no original, thumbnails or records');
     $before = glob($base . '/original/*');
     $media = $api->create('media', [
         'o:ingester' => 'url', 'ingest_url' => 'http://127.0.0.1:8766/over.txt',
@@ -68,6 +91,11 @@ try {
         !$media->hasOriginal() && glob($base . '/original/*') === $before,
         'URL without an original does not consume original-file quota'
     );
+    $media = $api->create('media', [
+        'o:ingester' => 'url', 'ingest_url' => 'http://127.0.0.1:8766/tiny.png',
+        'o:item' => ['o:id' => $target->id()], 'store_original' => false,
+    ])->getContent();
+    $check(!$media->hasOriginal() && $media->hasThumbnails(), 'thumbnail-only URL fixture generates real thumbnails');
     $users->setTargetId($admin->getId());
     $users->set('diskquota_user_quota', 0);
     $sites->setTargetId($other->id());

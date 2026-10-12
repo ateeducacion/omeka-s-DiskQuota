@@ -61,6 +61,9 @@ try {
     $reject(fn () => $api->create('items', [
         'o:site' => [['o:id' => $empty->id()]], 'o:media' => [$upload(0), $upload(1)],
     ], $files), 'site quota includes pending uploads in the same item');
+    $reject(fn () => $api->create('items', [
+        'o:site' => [['o:id' => $empty->id()]], 'o:media' => [$upload(11), $upload(12), $upload(13)],
+    ], $files), 'rejected third upload cleans both previously accepted files');
     $sites->setTargetId($empty->id());
     $sites->set('diskquota_site_quota', 0);
     $manager = $services->get('DiskQuota\DiskQuotaManager');
