@@ -59,5 +59,7 @@ run_test pending-uploads \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/full.txt" \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" \
     -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt"
+run_test site-assignment \
+    -F "file[]=@$scratch/large.txt" -F "file[]=@$scratch/small.txt" -F "file[]=@$scratch/small.txt"
 run_test url-ingestion
 exit "$status"

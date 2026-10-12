@@ -99,6 +99,7 @@ class SiteMembershipTest extends TestCase
         $item = $this->double(['getId' => 2, 'getSites' => $sites, 'getMedia' => [
             $this->double(['getId' => 21, 'hasOriginal' => true, 'getSize' => 300]),
             $this->double(['getId' => 22, 'hasOriginal' => false, 'getSize' => 900]),
+            // Ingested in this same request: the added site gains it together with media 21.
             $this->double(['getId' => null, 'hasOriginal' => true, 'getSize' => 5000]),
         ]]);
         $errors = new ErrorStore();
@@ -115,8 +116,8 @@ class SiteMembershipTest extends TestCase
             'unchanged sites are not queried' => [[10, 20], false, [], false],
             'kept sites are not rechecked' => [[10, 20], true, [], false],
             'removed site is not checked' => [[10], true, [], false],
-            'new site with room' => [[10, 20, 40], true, [[40, 300]], false],
-            'new full site rejects' => [[10, 30], true, [[30, 300]], true],
+            'new site counts kept and new originals' => [[10, 20, 40], true, [[40, 5300]], false],
+            'new full site rejects' => [[10, 30], true, [[30, 5300]], true],
         ];
     }
 

@@ -7,12 +7,15 @@ use Laminas\ServiceManager\ServiceLocatorInterface;
 use Omeka\Stdlib\Message;
 
 /**
- * Rejects adding an existing item to a site that cannot hold its stored originals.
+ * Rejects adding an existing item to a site that cannot hold its originals.
  *
- * New files are checked on media.ingest_file.pre against the item's final sites; this
- * covers the bytes the item already has. ponytail: each item is checked against persisted
- * usage only, so a batch that adds several items to one site in a single request can overshoot
- * by that batch; core's UpdateSiteItems job writes item_site with SQL and is not covered.
+ * Runs after ItemAdapter hydrated both sites and media, so the final media collection holds
+ * the kept originals plus the files ingested in this same request (removed media are gone).
+ * An added site gains all of them at once, even if each new file fit on its own at ingest.
+ *
+ * Note: each item is checked against persisted usage only, so a batch that adds several items
+ * to one site in a single request can overshoot by that batch. Core's UpdateSiteItems job
+ * writes item_site with SQL and is not covered here.
  */
 class SiteAssignmentListener
 {
@@ -47,7 +50,7 @@ class SiteAssignmentListener
         }
         $bytes = 0;
         foreach ($item->getMedia() as $media) {
-            if ($media->getId() !== null && $media->hasOriginal()) {
+            if ($media->hasOriginal()) {
                 $bytes += (int) $media->getSize();
             }
         }
